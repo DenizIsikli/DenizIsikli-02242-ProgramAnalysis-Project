@@ -1,0 +1,17 @@
+\section{Motivating Example}
+\label{sec:example}
+% Length: 1-2 pages. An example illustrating your approach,
+% ideally a JPAMB case where the existing analyses fail and yours succeeds.
+
+\begin{lstlisting}[float, label=lst:example, caption={TODO: Example JPAMB case.}]
+@Case("(0) -> ok")
+@Case("(1) -> ok")
+public static int example(int n) {
+  if (n != 0) {
+    return 1 / n;
+  }
+  return 0;
+}
+\end{lstlisting}
+
+\todo{Walk through \cref{lst:example}: what the baseline analysis reports, and what our approach reports instead.}

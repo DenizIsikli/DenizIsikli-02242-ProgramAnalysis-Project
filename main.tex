@@ -1,0 +1,67 @@
+\documentclass[nonacm, acmsmall]{acmart}
+% Tip: add "review" to the options above to get line numbers while drafting.
+
+\setcopyright{none}
+\citestyle{acmauthoryear}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{cleveref}
+
+\graphicspath{{figures/}}
+
+% Listings: JPAMB cases are Java.
+\lstset{language=Java, basicstyle=\ttfamily\small, columns=fullflexible,
+  keepspaces=true, numbers=left, numberstyle=\tiny, frame=tb}
+\crefname{lstlisting}{listing}{listings}
+\Crefname{lstlisting}{Listing}{Listings}
+
+% Shared macros (keep all \newcommand's here, not in the sections).
+\newcommand\jpamb{\textsc{JPAMB}}
+\newcommand\set[1]{\left\{#1\right\}}
+\newcommand\todo[1]{\textcolor{red}{\textbf{TODO:} #1}}
+
+% ---------------------------------------------------------------------------
+\title{TODO: Project Title}
+
+\author{Deniz Isikli}
+\email{s215818@dtu.dk}
+\author{Cristina Semikina}
+\email{s260209@dtu.dk}
+\author{Krish Devendra Waghresha}
+\email{s252788@dtu.dk}
+\affiliation{%
+  \institution{DTU Compute - Group XX}
+  \city{Kgs. Lyngby}
+  \country{Denmark}}
+
+\begin{abstract}
+\input{sections/00-abstract}
+\end{abstract}
+
+\begin{document}
+
+\maketitle
+
+% Main paper: at most 10 pages (everything before \appendix).
+\input{sections/01-introduction}
+\input{sections/02-example}
+\input{sections/03-approach}
+\input{sections/04-evaluation}
+\input{sections/05-related-work}
+\input{sections/06-conclusion}
+
+% Appendix: does not count towards the 10 pages.
+\appendix
+\input{appendix/A-data-availability}
+\input{appendix/B-ai-statement}
+\input{appendix/C-contributions}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+
+\end{document}
