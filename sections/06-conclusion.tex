@@ -1,5 +1,13 @@
 \section{Conclusion}
 \label{sec:conclusion}
-% Length: 0-1/2 page. A short recap of the paper.
 
-\todo{Short recap.}
+We asked whether an edit preserves the behaviour of a method, and where it does not. Our
+checker splits the input domain into boxes. It decides each box with an interval analysis
+of the two versions and sound verdict rules, and sends only the value comparison on boxes
+where both versions return normally to a bit-vector SMT query. On 20 pairs and two domains
+it never gave a wrong verdict. It decided 38 of 40 runs and certified 96\% of the inputs on
+average, against 45\% for a single SMT query and 2\% for differential testing. It also
+decided loop pairs that symbolic execution rejects. The main limitation is that intervals
+cannot relate the two versions, so loops with loop-dependent results stay \unk{}. A
+relational domain over a product program, and support for calls and the heap, are the
+natural next steps.

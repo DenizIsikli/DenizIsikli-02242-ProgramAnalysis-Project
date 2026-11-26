@@ -1,8 +1,60 @@
 \section{Related Work}
 \label{sec:related}
-% Length: 1-2 pages. Discuss the technique and alternative techniques that
-% solve the same problem, and explain why other techniques from the lectures
-% (and the literature) were not used. Each paper read counts for PRW.
 
-\todo{Related work and alternative techniques.}
-% Example citation: \citet{cousot1977abstract} or \citep{cousot1977abstract}.
+\paragraph{Regression verification and equivalence checking}
+\citet{godlin2009regression} introduced \emph{regression verification}: proving that two
+closely related programs produce the same output for every input. They do it by pairing
+recursive calls and checking loop-free bodies with a bounded model checker.
+SymDiff~\citep{lahiri2012symdiff} translates both versions to an intermediate verification
+language and checks equivalence with an SMT solver, reporting a counterexample when the
+versions differ. Both give one verdict for the whole input space. Our Rule~3 is such a
+check, but we only ask it on regions where the interval layer has already shown that both
+versions return normally. That makes the query smaller, and the rest of the domain still
+receives a verdict when the versions differ.
+
+\paragraph{Differential symbolic execution and partitioning}
+Differential symbolic execution~\citep{person2008dse} summarises both versions symbolically
+and abstracts unchanged code with uninterpreted functions. ARDiff~\citep{badihi2020ardiff}
+refines those uninterpreted functions on demand when the abstraction is too coarse to decide
+equivalence. Our z3only baseline is a simplified version of this idea without the
+abstraction of common code. Partition-based regression
+verification~\citep{boehme2013prv} is the closest in spirit: it splits the input space into
+partitions with the same symbolic paths, and reports each partition as equivalent or
+different, so the result is useful even when the whole program cannot be decided.
+PASDA~\citep{glock2024pasda} extends partition-based differencing with best-effort
+classifications for partitions that cannot be proved. We share the goal of per-region
+verdicts, but our partitions are boxes produced by splitting at code constants, and many of
+them are decided by an abstract interpretation without any path enumeration. This is what
+lets us decide loop pairs such as \code{loopThenZero}, where path-based partitioning would
+have to unroll.
+
+\paragraph{Abstract interpretation of differences}
+\citet{partush2013abstract} analyse the \emph{correlating program} of two versions with
+numerical abstract domains, so that the abstraction can express relations such as
+$x_A = x_B$ directly. \citet{trostanetski2017modular} compute under- and
+over-approximations of the input sets on which two versions differ, procedure by procedure,
+and refine summaries on demand. Both are more precise than our approach on loops, because
+they relate the two executions inside the abstract domain. We deliberately analyse each
+version separately with plain intervals and leave relations to the solver. The domain stays
+simple and its proofs short, and the price is the \unk{} we report for
+\code{loopDiv/\_rewritten}.
+
+\paragraph{Scaling to real code}
+DiffKemp~\citep{malik2021diffkemp} checks semantic equivalence of functions across versions
+of the Linux kernel. It combines pattern matching for known semantics-preserving changes
+with light-weight static analysis, and it trades completeness for scale. Our checker targets
+the opposite end, small methods with proofs, and could serve as a precise back-end for
+functions such a tool cannot match.
+
+\paragraph{Alternatives from the course}
+We considered three other techniques from the lectures. \emph{Sign analysis} is too coarse:
+it cannot isolate $(0,0)$ or prove that two return values are equal. A \emph{relational
+domain} such as octagons~\citep{mine2006octagon} on a product program could prove some
+preserved loop pairs, but it needs a product construction and much more involved soundness
+and widening proofs. We chose intervals, whose proofs we could complete, and moved the
+relational reasoning to the solver. \emph{Coverage-guided fuzzing} would improve the testing
+baseline, but like differential testing~\citep{mckeeman1998differential} it can only refute
+equivalence and can never prove a region \pres{}. Our refinement loop is related to
+counterexample-guided abstraction refinement~\citep{clarke2000cegar}, but it refines the
+\emph{input partition} instead of the abstraction, which keeps the abstract domain fixed and
+the argument for termination simple.

@@ -1,26 +1,223 @@
 \section{Approach}
 \label{sec:approach}
-% Length: 2-3 pages. High-level description of the analysis technique.
 
-% Optional overview figure (counts for PDI, Create a Process Diagram).
-% \begin{figure}
-%   \centering
-%   \includegraphics[width=\linewidth]{overview}
-%   \caption{Overview of our approach.}
-%   \label{fig:overview}
-% \end{figure}
+\begin{figure}
+  \centering
+  \begin{tikzpicture}[font=\footnotesize, node distance=5mm and 7mm,
+      box/.style={draw, rounded corners=2pt, align=center, minimum height=9mm, inner sep=3pt},
+      dec/.style={draw, diamond, aspect=2, align=center, inner sep=0.5pt},
+      res/.style={draw, rounded corners=2pt, align=center, fill=gray!12, minimum height=9mm, inner sep=3pt},
+      >={Stealth[length=2mm]}]
+    % top row
+    \node[box] (in) {pair $(A,B)$\\ domain $D$};
+    \node[box, right=of in] (q) {queue of\\ regions};
+    \node[box, right=of q] (ai) {interval analysis\\ $\hat A(R)$, $\hat B(R)$};
+    \node[dec, right=of ai] (rules) {Rules\\ 0--2b$'$};
+    \node[res, right=9mm of rules] (dec1) {region\\ decided};
+    \node[res, right=of dec1] (out) {region map,\\ verdict,\\ coverage};
+    % bottom row
+    \node[dec, below=9mm of rules] (both) {both\\ $\set{\ok}$?};
+    \node[box, right=9mm of both] (smt) {Z3 bit-vector\\ return query};
+    \node[box, below=9mm of ai] (replay) {replay witness,\\ keep it};
+    \node[box, below=9mm of q] (split) {split $R$ at\\ code constants};
+    % edges
+    \draw[->] (in) -- (q);
+    \draw[->] (q) -- node[above]{$R$} (ai);
+    \draw[->] (ai) -- (rules);
+    \draw[->] (rules) -- node[above]{yes} (dec1);
+    \draw[->] (dec1) -- (out);
+    \draw[->] (rules) -- node[right]{no} (both);
+    \draw[->] (both) -- node[above]{yes} (smt);
+    \draw[->] (smt) -- node[right]{UNSAT} (dec1);
+    \draw[->] (smt.south) -- ++(0,-0.45) -| node[pos=0.2, below]{SAT} (replay.south);
+    \draw[->] (both) -- node[above]{no} (replay.east |- both) ;
+    \draw[->] (replay) -- (split);
+    \draw[->] (split) -- (q);
+  \end{tikzpicture}
+  \caption{Overview. Each region is first given to the interval analysis of both versions. The
+  verdict rules decide it or pass it on; only regions where both versions provably return
+  normally reach the solver. A replayed witness is kept, and its region is still split so the
+  rest of it can be certified. Regions that are undecided (\emph{no}, or a solver
+  \emph{unknown}) are split as well. Splitting stops at a region budget.}
+  \label{fig:overview}
+\end{figure}
+
+\Cref{fig:overview} gives an overview. We first fix what ``same behaviour'' means
+(\cref{sec:background}), then describe the analysis, the verdict rules and the refinement
+loop (\cref{sec:formal}), and finally their guarantees (\cref{sec:guarantees}).
 
 \subsection{Background}
 \label{sec:background}
-% Walkthrough of the theory needed to understand the technique.
-\todo{Theory needed to understand the technique.}
+
+\paragraph{Observations}
+A \emph{pair} is two static methods $A$ and $B$ with the same descriptor. We support methods
+with \code{int} parameters, an \code{int} or \code{void} result, and only integer
+instructions, branches, \code{goto} and the assertion pattern; calls, the heap and
+\code{try}/\code{catch} make a pair unsupported. An input is a vector
+$x \in \mathbb{Z}_{32}^n$. Running $P$ on $x$ yields the \emph{observation}
+$\mathit{obs}_P(x) = (o, v)$, where $o$ is the outcome class (\ok{}, \code{assertion error},
+\dbz{}, \code{*} for non-termination, \ldots) and $v$ is the 32-bit return value if
+$o = \ok{}$ and $\bot$ otherwise. Exception messages, timing and the path taken are not
+observed. $A$ and $B$ \emph{agree on $x$} iff $\mathit{obs}_A(x) = \mathit{obs}_B(x)$. A
+region $R = I_1 \times \dots \times I_n$ is a box of integer intervals. The pair is
+\emph{preserved on $R$} if it agrees on every $x \in R$ and \emph{changed on $R$} if it
+disagrees on some $x \in R$. Supported methods are deterministic, so $\mathit{obs}_P$ is a
+function.
+
+\paragraph{Interval abstract interpretation}
+Abstract interpretation~\citep{cousot1977abstract} runs a program on abstract values that
+each describe a set of concrete values. We use the interval lattice over Java \code{int}s,
+$\mathcal{I} = \set{[l,u] \mid \mathit{MIN} \le l \le u \le \mathit{MAX}} \cup \set{\bot}$,
+ordered by inclusion, with $\gamma([l,u]) = \set{v \mid l \le v \le u}$ and
+$\alpha(S) = [\min S, \max S]$. This pair is a Galois connection. An abstract operation
+$\mathit{op}^\sharp$ is sound if $\mathit{op}(x,y) \in \gamma(\mathit{op}^\sharp(X,Y))$
+for all $x \in \gamma(X)$, $y \in \gamma(Y)$ on which $\mathit{op}$ does not throw, and if
+its error set contains every exception $\mathit{op}$ can raise there. The lattice has
+height about $2^{32}$, so loops need a widening operator $\nabla$ to reach a fixpoint
+quickly.
+
+\paragraph{Symbolic execution and SMT}
+Symbolic execution~\citep{king1976symbolic} runs a program on symbolic inputs and collects,
+for each feasible path $\pi$, a path condition and a symbolic result. Two loop-free
+methods can then be compared by asking an SMT solver whether some input satisfies a path
+condition of each version and makes the results differ. Java \code{int} arithmetic wraps,
+so we encode values as 32-bit bit-vectors: \code{bvsdiv} and \code{bvsrem} truncate toward
+zero like \code{idiv} and \code{irem}, including $\mathit{MIN} / {-1} = \mathit{MIN}$.
+Unbounded integers would give wrong answers near the limits.
 
 \subsection{Formal Description}
 \label{sec:formal}
-% Formal description of the approach.
-\todo{Formal description of the approach.}
+
+\paragraph{Region analysis}
+For a version $P$ and a non-empty region $R$, the analysis computes an outcome set
+$\hat P(R)$ and a return interval $\hat r_P(R)$. It is a forward worklist interpreter
+over bytecode offsets. The abstract state at each offset is a tuple of intervals for the
+locals and a stack of values, and the initial state maps parameter $i$ to $I_i$.
+\begin{itemize}
+  \item \textbf{Arithmetic.} $+$, $-$, $\times$ and negation compute the exact mathematical
+        bounds and return $\top$ if a bound leaves the \code{int} range, since a wrapped
+        result could then be any value. For $X / Y$ and $X \,\%\, Y$ we add \dbz{} to the
+        outcomes iff $0 \in Y$. We split $Y \setminus \set{0}$ into a negative part and a
+        positive part and join the results of the two parts. On a part with fixed sign the
+        quotient is monotone in each argument, so its extremes are at the four corners. The
+        result is $\top$ if $\mathit{MIN} \in X$ and $-1 \in Y$.
+  \item \textbf{Branch refinement.} A conditional branch on $X \bowtie Y$ is followed on
+        each side with $X, Y$ narrowed by the condition or its negation; an empty
+        interval marks the side as infeasible. Narrowing a stack value is not enough, so
+        every stack value carries a tag $\mathit{src}$ that names the local it was loaded
+        from. The tag is cleared when that local is written, and the local itself is
+        narrowed too. This is how $b \neq 0$ in \code{if (b == 0) return 0} reaches the
+        later division. Intervals cannot express a hole, so $\neq$ only removes an
+        endpoint.
+  \item \textbf{Loops.} At a backward edge the new state is widened: an interval bound
+        that grew jumps to $\mathit{MIN}$ or $\mathit{MAX}$. Every reachable backward edge
+        adds the outcome \code{*} (``may not terminate''), unless the loop matches the
+        counting pattern \code{javac} emits for \code{for (i = ..; i < n; i++)}. That
+        pattern is a single exit test \code{i >= n}, a straight-line body with exactly one
+        \code{i += 1}, and no writes to \code{i} or \code{n}. Such a loop always exits.
+  \item \textbf{Unsupported code.} Any other instruction makes the result
+        \emph{unsupported}, with the full outcome set and $\top$ returns. No rule can
+        then fire.
+\end{itemize}
+
+\paragraph{Verdict rules}
+For a region $R$ the rules below are tried in order; the first that matches decides.
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}} \toprule
+\# & Condition & Verdict & Scope \\ \midrule
+0  & $\hat A(R) = \emptyset$ or $\hat B(R) = \emptyset$ & \unk{} & analysis failure \\
+1  & $\hat A(R) = \hat B(R) = \set{e}$, $e \neq \ok$ & \pres{} & all of $R$ \\
+2  & $\hat A(R) \cap \hat B(R) = \emptyset$ & \chg{} & all of $R$ \\
+2b & both $\set{\ok}$, $\hat r_A(R) \cap \hat r_B(R) = \emptyset$ & \chg{} & all of $R$ \\
+2b$'$ & both $\set{\ok}$, $\hat r_A(R) = \hat r_B(R) = [c,c]$ & \pres{} & all of $R$ \\
+3  & both $\set{\ok}$ and $\Phi(R)$ UNSAT & \pres{} & all of $R$ \\
+3$'$ & both $\set{\ok}$ and $\Phi(R)$ has a model $w$ that replays & \chg{} & witness $w$ only \\
+4  & otherwise & \unk{}, split $R$ & \\ \bottomrule
+\end{tabular}
+\end{center}
+Rule~1 needs a \emph{singleton} set. Equal sets with two outcomes prove nothing: in
+\cref{lst:example} both sets are $\set{\ok, \dbz}$ on $D$, yet the versions differ at
+$(0,0)$. In general $A$ and $B$ may swap their outcomes between inputs.
+
+\paragraph{Return comparison}
+For rules 3 and 3$'$ we symbolically execute both versions over \emph{shared} bit-vector
+inputs $\vec x$ and collect their normally returning paths $(\pi_{P,i}, r_{P,i})$. Every
+division on such a path adds ``divisor $\neq 0$'' to $\pi$, because SMT-LIB defines
+$x / 0$ while Java throws. Then
+\[
+  \Phi(R) \;=\; \vec x \in R \;\wedge\; \bigvee_{i,j}\bigl(\pi_{A,i} \wedge \pi_{B,j}
+  \wedge r_{A,i} \neq r_{B,j}\bigr).
+\]
+Before an UNSAT answer is trusted, the checker asks Z3 whether the collected paths cover all
+of $R$ for both versions. If they do not, the answer is \unk{}. A model $w$ is replayed on
+an independent concrete interpreter with Java \code{int} semantics and is reported only if
+the two observations really differ. A solver timeout, a backward jump or more than 256
+paths also give \unk{}, never \pres{}.
+
+\paragraph{Refinement}
+\code{check\_pair} keeps a queue of regions, starting with $D$. An undecided region is
+split by \code{split\_region}. For the first parameter whose interval strictly contains a
+constant $c$ pushed by either version (or $0$), it produces $[l, c-1]$, $[c,c]$ and
+$[c+1, u]$. Without such a constant it bisects the widest interval. The children are
+disjoint and cover the parent. A region decided by Rule~3$'$ keeps its witness but is still
+split, so the rest of it can be certified. A budget (200 regions by default) bounds the
+loop; regions left over stay \unk{}. The pair verdict is \chg{} if any witness exists,
+\pres{} if \pres{} regions cover $D$, and \unk{} otherwise. The \emph{certified coverage} is
+the fraction of $D$ in \pres{} regions, whole-region \chg{} regions and witness points.
 
 \subsection{Theoretical Guarantees}
 \label{sec:guarantees}
-% Any theoretical guarantees (soundness, termination, ...). TAB / TWI go here.
-\todo{Soundness / termination arguments.}
+
+\paragraph{Soundness of the interval abstraction}
+Each transfer function satisfies the soundness condition above. For $+$, $-$ and $\times$,
+the mathematical result over a box is bounded by its corners, since the operation is
+monotone or linear in each argument. If both bounds lie in the \code{int} range, every Java
+result equals the mathematical one; otherwise the result is $\top$, which contains every
+wrapped value. For division, \code{idiv} throws iff $y = 0$, so ``\dbz{} iff $0 \in Y$'' is
+exact in both directions. On each fixed-sign part of $Y$, $q(x,y) = \mathit{trunc}(x/y)$
+is monotone in $x$ for fixed $y$ and attains its extreme over $y$ at an endpoint, so the
+corners bound it. Also $|q| \le |x|$, so only $\mathit{MIN}/{-1}$ can overflow, and that
+case returns $\top$. For remainder we use that $x \,\%\, y$ has the sign of $x$ and
+satisfies $|x \,\%\, y| < |y|$ and $|x \,\%\, y| \le |x|$. Branch refinement keeps every
+pair $(x,y)$ that satisfies the condition, for example $x < y \le d \Rightarrow x \le d-1$.
+The $\mathit{src}$ tag is sound because it holds only while the stack value equals the
+current content of the local. We checked every operation with property-based tests and with
+a brute-force check of about 3.9 million cases on intervals with endpoints near $0$,
+$\mathit{MIN}$ and $\mathit{MAX}$; there were no failures.
+
+\paragraph{Termination of widening}
+$X \nabla Y$ keeps each bound that did not grow and moves the other to its limit, so
+$X \sqsubseteq X \nabla Y$ and $Y \sqsubseteq X \nabla Y$. Along any widening chain each
+of the two bounds of each of the $k$ slots at a loop head changes at most once. The state
+there changes at most $2k$ times, so the worklist terminates. The counting-loop pattern is
+sound for \code{*}: the body runs only when $i < n \le \mathit{MAX}$, so $i+1$ cannot wrap,
+and $n - i$ is a natural number that decreases by one on each iteration. The pattern
+\code{i <= n} is rejected, because with $n = \mathit{MAX}$ it never exits.
+
+\paragraph{Soundness of the verdicts}
+Let (S) be the soundness of the region analysis: for all $x \in R$,
+$\mathit{out}_P(x) \in \hat P(R)$, and $\mathit{ret}_P(x) \in \hat r_P(R)$ if $P$ returns.
+\begin{itemize}
+  \item \emph{Rule 1.} By (S), both versions end in $e$ on every $x \in R$. Error
+        observations carry no value, so $\mathit{obs}_A(x) = (e,\bot) = \mathit{obs}_B(x)$.
+  \item \emph{Rule 2.} By (S), $\mathit{out}_A(x) \in \hat A(R)$ and
+        $\mathit{out}_B(x) \in \hat B(R)$, and the sets are disjoint, so the outcomes differ
+        for every $x$. Rule~0 must run first, since an empty set would make Rule~2 fire
+        vacuously.
+  \item \emph{Rules 2b and 2b$'$.} These are the same arguments applied to the return
+        intervals.
+  \item \emph{Rule 3.} Suppose the versions disagree on some $x \in R$. Both return
+        normally, so $\mathit{ret}_A(x) \neq \mathit{ret}_B(x)$. The paths are complete
+        (checked) and execution is deterministic, so $x$ satisfies exactly one
+        $\pi_{A,i}$ and one $\pi_{B,j}$, and then $x$ is a model of $\Phi(R)$. This
+        contradicts UNSAT. The proof needs the bit-vector encoding, the divisor
+        conditions and the shared inputs.
+  \item \emph{Rule 3$'$.} A replayed witness is a concrete disagreement.
+\end{itemize}
+Refinement terminates because every split strictly shrinks a finite region and the budget
+bounds the number of regions. Children partition their parent, so coverage counts each
+input once. Hence a \pres{} verdict is a proof over all of $D$, and a \chg{} verdict always
+comes with a replayed witness. The checker is not complete: intervals cannot relate two
+variables, so non-constant return values need the solver, and loops with loop-dependent
+return values stay \unk{}.

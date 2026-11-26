@@ -1,34 +1,184 @@
 \section{Evaluation}
 \label{sec:evaluation}
-% Length: 2-3 pages. Empirical evaluation, compared against at least one other
-% technique (or variations/optimizations of your own).
+
+We evaluate whether region-based checking is sound in practice, how much of the input
+domain it certifies, and what the interval layer adds on top of an SMT solver.
 
 \subsection{Setup}
 \label{sec:setup}
-% Benchmarks, baselines, metrics, hardware, timeouts.
-\todo{Experimental setup.}
+
+\paragraph{Benchmarks}
+We use 20 method pairs in three groups. The \emph{corpus} (\code{Refactorings.java}) holds
+10 pairs written for this project: 5 preserving edits (inlining a temporary, removing dead
+code, inverting a branch, reversing a \code{max} comparison, and an unchanged pair), 3
+value-only faults (\code{sign}, \code{absVal}, an off-by-one comparison \code{belowTwo})
+and 2 exception faults (guard removals in \code{ratio} and \code{reciprocal}). For the
+corpus, ground truth comes from the real JVM: a Java harness runs both versions with
+\code{-ea} on all 238 inputs of the declared domains and records outcome and return value.
+An answer key written by hand is checked against these observations. Five pairs are taken
+from the stock \jpamb{} class \code{Simple}. Five evaluation-only pairs
+(\code{EvalPairs.java}) contain loops (\code{loopDiv} with an added guard or a rewritten
+body, and \code{loopThenZero}) or many paths (\code{ladder}: twelve sequential \code{if}s,
+reordered or with one constant changed).
+
+\paragraph{Configurations}
+We compare four configurations on each pair:
+\begin{itemize}
+  \item \textbf{gate}: intervals, verdict rules 0--2b$'$ and refinement, no solver;
+  \item \textbf{hybrid}: our full approach;
+  \item \textbf{z3only}: one SMT query over the whole domain that encodes both the error
+        paths and the returning paths, so it compares outcome class and value together. This
+        is a differential-symbolic-execution style baseline~\citep{person2008dse} without
+        the interval layer;
+  \item \textbf{random}: differential testing~\citep{mckeeman1998differential} with 1000
+        uniformly random inputs (seed 0) on a concrete interpreter with Java \code{int}
+        semantics. Without a difference it answers \unk{}, never \pres{}.
+\end{itemize}
+Every pair is run on a \emph{small} domain $[-3,3]^k$, where ground truth comes from
+exhaustive execution, and on a \emph{large} domain $[-1000,1000]^k$ (up to 4 million
+inputs). On the large domain a \pres{} verdict is checked against 2000 random inputs, and
+every \chg{} verdict carries a replayed witness.
+
+\paragraph{Metrics}
+A verdict is \emph{wrong} if it says \pres{} while a difference exists, or \chg{} without
+a real difference; \unk{} is never wrong. A pair is \emph{decided} if the verdict is not
+\unk{}. \emph{Certified coverage} is the fraction of the domain with a proved verdict
+(\cref{sec:formal}). For the baselines it is $1$ for \pres{} and one input for a witness.
+We also report wall-clock time, SMT queries and region analyses.
+
+\paragraph{Environment}
+Python~3.13 with the \jpamb{} 0.9.0 bytecode model, Z3 5.4.1, 5\,s timeout per SMT query,
+a budget of 200 regions, on a 2-core Intel Xeon (2.3\,GHz) cloud VM. Times are from a
+single run. All 184 unit and property tests of the analysis pass.
 
 \subsection{Results}
 \label{sec:results}
 
 \begin{table}
   \centering
-  \caption{TODO: Results on \jpamb{}.}
+  \caption{Summary over 20 pairs per domain (40 runs per configuration). \emph{Coverage}
+  is the mean certified coverage. \emph{SMT} is the number of solver queries in total.}
   \label{tab:results}
-  \begin{tabular}{@{}lrrr@{}} \toprule
-    Analysis & Score & Precision & Time (s) \\ \midrule
-    Baseline & -- & -- & -- \\
-    Ours     & -- & -- & -- \\ \bottomrule
+  \small
+  \begin{tabular}{@{}l rrrr rrrr r@{}} \toprule
+    & \multicolumn{4}{c}{small $[-3,3]^k$} & \multicolumn{4}{c}{large $[-1000,1000]^k$} & all \\
+    \cmidrule(lr){2-5} \cmidrule(lr){6-9}
+    Config & decided & coverage & SMT & ms & decided & coverage & SMT & ms & wrong \\ \midrule
+    gate   & 19/20 & 98\% & 0   & 383 & 13/20 & 61\% & 0   & 1680  & 0 \\
+    hybrid & 19/20 & 98\% & 101 & 475 & \textbf{19/20} & \textbf{95\%} & 566 & 2782 & 0 \\
+    z3only & 17/20 & 49\% & 20  & 436 & 17/20 & 40\% & 20  & 533   & 0 \\
+    random & 9/20  & 5\%  & 0   & 540 & 9/20  & $<$1\% & 0 & 15135 & 0 \\ \bottomrule
   \end{tabular}
 \end{table}
 
-\todo{Present the results (\cref{tab:results}).}
+\begin{table}
+  \centering
+  \caption{Verdict (\textsf{P}reserved, \textsf{C}hanged, \textsf{U}nknown) and certified
+  coverage in \% per pair, for the small (S) and large (L) domain. \emph{Truth} is the
+  exhaustive result on the small domain. Groups: corpus, \code{Simple}, \code{EvalPairs}.}
+  \label{tab:perpair}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabular}{@{}ll rr rr rr rr@{}} \toprule
+    & & \multicolumn{2}{c}{gate} & \multicolumn{2}{c}{hybrid} & \multicolumn{2}{c}{z3only} & \multicolumn{2}{c}{random} \\
+    \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(lr){9-10}
+    Pair & Truth & S & L & S & L & S & L & S & L \\ \midrule
+\code{safeDiv} & eq & P\,100 & U\,46 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{ratio} & diff & C\,100 & C\,26 & C\,100 & C\,100 & C\,2 & C\,$<$1 & C\,2 & U\,0 \\
+\code{sign} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{absVal} & diff & C\,100 & C\,50 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{belowTwo} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{reciprocal} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{addTemps} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{deadCode} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{absBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{maxBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\midrule
+\code{justAdd/justAdd} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{justAdd/justMulitply} & diff & C\,100 & C\,91 & C\,100 & C\,91 & C\,2 & C\,$<$1 & C\,2 & C\,$<$1 \\
+\code{divideByN/divideByN} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{checkBeforeDivByN/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{checkBeforeDivByN2/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\midrule
+\code{loopDiv/\_guarded} & diff & C\,76 & C\,50 & C\,76 & C\,50 & U\,0 & U\,0 & C\,2 & C\,$<$1 \\
+\code{loopDiv/\_rewritten} & eq & U\,76 & U\,50 & U\,76 & U\,50 & U\,0 & U\,0 & U\,0 & U\,0 \\
+\code{loopThenZero} & eq & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 & U\,0 & U\,0 \\
+\code{ladder/\_reordered} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{ladder/\_changed} & eq & P\,100 & C\,100 & P\,100 & C\,100 & P\,100 & C\,$<$1 & U\,0 & C\,$<$1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\Cref{tab:results} summarises the 160 runs and \cref{tab:perpair} lists every pair.
+\textbf{No configuration produced a wrong verdict.} All 73 witnesses behind \chg{}
+verdicts replay as real differences, including those on the large domain. In a separate
+run of the pair harness, with a matched 5\,s budget per pair and witnesses checked against
+the real-JVM observations, the analyser and seeded differential testing both pass all 10
+corpus pairs on the declared domains. With at most 49 inputs per pair,
+testing can be exhaustive there.
+
+On the large domain the hybrid decides 19 of 20 pairs and certifies 95\% of the inputs on
+average, against 17 of 20 and 40\% for one SMT query over the domain and 9 of 20 and under
+1\% for random testing. The gap in coverage comes from the \chg{} pairs. z3only and random
+certify only their witness, while the hybrid also proves the rest of the domain. For
+\code{ratio} that means 48 of 49 inputs \pres{}; on the large domain it means all but the
+one input $(0,0)$ of four million. Random testing misses this difference on the large domain.
+
+\paragraph{Loops}
+The symbolic executor rejects backward jumps, so z3only answers \unk{} on all three loop
+pairs. The interval layer still decides two of them. Both versions of \code{loopThenZero}
+end in \code{s / 0} after a counting loop that provably terminates, so their outcome set is
+$\set{\dbz}$ and Rule~1 proves the pair \pres{} on the whole domain in one region analysis.
+For \code{loopDiv} with an added guard, splitting at $d = 0$ isolates a region with
+disjoint outcome sets, which gives a whole-region \chg{} and certifies 76\% (small) and 50\%
+(large) of the inputs.
+
+\paragraph{Cost}
+On loop-free pairs one SMT query is the fastest way to a verdict: z3only needs 533\,ms for
+all large-domain runs, and the hybrid needs 2782\,ms. The extra time buys coverage. After a
+witness is found the hybrid keeps splitting and querying, which costs most on
+\code{justAdd/justMulitply} (144 queries, 1.3\,s) and \code{ladder/\_changed}. The gate
+alone uses no solver and is the fastest configuration that proves anything on loops, but
+without Rule~3 it decides only 13 of the 20 large-domain pairs.
 
 \subsection{Discussion}
 \label{sec:discussion}
-% Analysis of the results: answer the research question.
-\todo{Analysis of the results.}
+
+The answer to the research question is yes, with a qualification. Region-based checking
+was sound on every run, and it is the only configuration that both decides most pairs and
+says \emph{where} an edit changes behaviour. The two layers complement each other. The
+intervals decide every region where outcome classes differ or coincide on a single error,
+and they handle loops the solver cannot enter. The solver decides the regions where both
+versions return and the question is about the value. Each layer alone falls short: without
+the solver, the gate decides none of the five preserving corpus pairs on the large
+domain, because their return values are not constant and intervals cannot relate the two
+versions. Without the gate, z3only cannot handle loops and gives no coverage beyond a
+witness.
+
+The qualification is that the hybrid is not the cheapest way to a yes/no verdict on
+loop-free code; z3only is faster there. Its advantage is coverage and explanation, plus
+loops. The many-path pairs did not cause path explosion, because infeasible paths are
+pruned early, so we make no claim about scalability in the number of paths. One pair,
+\code{loopDiv/\_rewritten}, stays \unk{} for every configuration: both versions return a
+value that depends on the loop, which neither intervals nor loop-free symbolic execution can
+relate.
 
 \subsection{Threats to Validity}
 \label{sec:threats}
-\todo{Internal and external threats to validity.}
+
+\paragraph{Internal}
+We wrote the corpus and the extra pairs ourselves, and the splitting heuristic uses the
+constants that appear in the code, which suits small hand-written pairs. We reduce the risk
+of bugs in the checker by taking the corpus ground truth from the real JVM, replaying every
+witness, and testing the interval operations against Java semantics with property-based
+tests. For the \code{Simple} and \code{EvalPairs} groups the ground truth comes from our
+Python interpreter. That interpreter is tested against the real-JVM observations, but
+only on the corpus. On the large domain a \pres{} verdict is only spot-checked by sampling,
+so a soundness bug that affects few inputs could go unnoticed there. Times come from a
+single run on a shared VM and include Python start-up effects.
+
+\paragraph{External}
+The 20 pairs are small, static, \code{int}-only and call-free, and the domains are boxes
+of at most $2001^2$ inputs. Real refactorings involve objects, calls and exceptions that are
+caught, which our observation contract excludes, so the results say nothing about them. A
+verdict holds only on the declared domain, not on all of \code{int}.

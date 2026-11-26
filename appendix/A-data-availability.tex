@@ -1,5 +1,20 @@
 \section{Data Availability}
 \label{app:data}
-% Where can the code, benchmarks and results be found? How do you reproduce them?
 
-\todo{Link to repository and instructions to reproduce the results.}
+All code, benchmarks and results are in the public repository
+\url{https://github.com/DenizIsikli/02242-ProgramAnalysis-Project}. The analysis is in
+\code{solutions/static/src}: \code{abstractions.py}, \code{region\_analysis.py},
+\code{region\_verdict.py}, \code{symbolic.py} and \code{baselines.py}. The corpus is in
+\code{Refactorings.java} and \code{EvalPairs.java} under \code{cases/jpamb/cases}, and the
+real-JVM observations and the answer key are in \code{evaluation/}. The design documents with the full
+correctness arguments are in \code{docs/refactoring/}. With Python 3.13, a JDK, and the
+dependencies \code{z3-solver}, \code{hypothesis} and \code{pytest} installed, run the
+following from the repository root:
+\begin{lstlisting}[language=bash, numbers=none]
+export PYTHONPATH=solutions/static/src:src
+python -m pytest solutions/static/tests -q          # 184 tests
+bash evaluation/observe.sh                          # real-JVM observations
+python evaluation/check_expected.py                 # check the answer key
+python solutions/static/src/check_pairs.py --budget-seconds 5 --seed 0
+python evaluation/ablation.py --csv ablation.csv    # Tables 1 and 2
+\end{lstlisting}
