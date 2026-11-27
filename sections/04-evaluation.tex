@@ -22,7 +22,7 @@ and 2 exception faults (guard removals in \code{ratio} and \code{reciprocal}). F
 corpus, ground truth comes from the real JVM: a Java harness runs both versions with
 \code{-ea} on all 238 inputs of the declared domains and records outcome and return value.
 An answer key written by hand is checked against these observations. Five pairs are taken
-from the stock \jpamb{} class \code{Simple}. Five evaluation-only pairs
+from the stock \jpamb{} class \code{Simple}; two of them (\code{justAdd/justAdd} and \code{divideByN/divideByN}) compare a method with itself and act as controls that must come out \pres{}. Five evaluation-only pairs
 (\code{EvalPairs.java}) contain loops (\code{loopDiv} with an added guard or a rewritten
 body, and \code{loopThenZero}) or many paths (\code{ladder}: twelve sequential \code{if}s,
 reordered or with one constant changed).
@@ -42,8 +42,10 @@ We compare four configurations on each pair:
 \end{itemize}
 Every pair is run on a \emph{small} domain $[-3,3]^k$, where ground truth comes from
 exhaustive execution, and on a \emph{large} domain $[-1000,1000]^k$ (up to 4 million
-inputs). On the large domain a \pres{} verdict is checked against 2000 random inputs, and
-every \chg{} verdict carries a replayed witness.
+inputs). On the large domain a \pres{} verdict is checked against 2000 random inputs. Every
+witness found by the solver (Rule~3$'$) is replayed on the concrete interpreter. A
+whole-region \chg{} verdict (Rules~2, 2b) is not replayed; it rests on the soundness of the
+analysis and, on the small domain, agrees with exhaustive execution.
 
 \paragraph{Metrics}
 A verdict is \emph{wrong} if it says \pres{} while a difference exists, or \chg{} without
@@ -81,8 +83,8 @@ single run. All 184 unit and property tests of the analysis pass.
 \Cref{tab:results} summarises the 160 runs, and \cref{tab:perpair} in \cref{app:perpair} lists every pair.
 
 \paragraph{RQ1: Soundness}
-\textbf{No configuration produced a wrong verdict.} All 73 witnesses behind \chg{}
-verdicts replay as real differences, including those on the large domain. In a separate
+\textbf{No configuration produced a wrong verdict.} Every witness from the solver replays as a real
+difference, including those on the large domain\todo{verify the count of 73 witnesses against a fresh run}. In a separate
 run of the pair harness, with a matched 5\,s budget per pair and witnesses checked against
 the real-JVM observations, the analyser and seeded differential testing both pass all 10
 corpus pairs on the declared domains. With at most 49 inputs per pair,
@@ -98,6 +100,21 @@ average, against 17 of 20 and 40\% for one SMT query over the domain and 9 of 20
 certify only their witness, while the hybrid also proves the rest of the domain. For
 \code{ratio} that means 48 of 49 inputs \pres{}; on the large domain it means all but the
 one input $(0,0)$ of four million. Random testing misses this difference on the large domain.
+
+\paragraph{Variance}
+Random testing is not deterministic, so we ran it with 20 seeds on every pair that really
+differs (19 pair and domain runs; \code{seed\_stats.py}, run on a laptop with an Intel Core
+i5-1038NG7). On the small domain all 20 seeds found the difference in all nine cases (180
+of 180), since 1000 inputs cover at most 49. On the large domain the detection rate was
+53\% (105 of 200 seeded runs) and varied by pair: 20 of 20 for \code{absVal},
+\code{justAdd/justMulitply} and \code{ladder/\_changed}, which differ on many inputs, and 12
+of 20 for \code{belowTwo}, 9 of 20 for \code{loopDiv/\_guarded}, 6 of 20 for \code{sign},
+\code{reciprocal} and both \code{checkBeforeDivideByN} variants, and 0 of 20 for
+\code{ratio}, which differs on one input in 4,004,001. A \chg{} verdict from testing is
+therefore a matter of luck on exactly the single-point differences that motivate this work.
+We also repeated every timing five times: the median total was about 9\,s for the hybrid
+and 2.4\,s for one SMT query. Both are medians over five runs on that laptop and are not
+comparable with the VM times in \cref{tab:results}.\todo{regenerate all numbers from one run}
 
 \paragraph{RQ3: Loops}
 The symbolic executor rejects backward jumps, so z3only answers \unk{} on all three loop
@@ -136,7 +153,10 @@ both versions return a loop-dependent value that neither layer can relate.
 \label{sec:threats}
 
 \paragraph{Internal}
-We wrote the corpus and the extra pairs ourselves, and the splitting heuristic uses the
+Certified coverage favours methods that localise: a solver that enumerated every differing
+input would score higher than our z3only, which stops at one witness by design. We therefore
+report decided runs and wrong verdicts next to coverage, and treat decided runs as the
+primary measure. We wrote the corpus and the extra pairs ourselves, and the splitting heuristic uses the
 constants that appear in the code, which suits small hand-written pairs. We reduce the risk
 of bugs in the checker by taking the corpus ground truth from the real JVM, replaying every
 witness, and testing the interval operations against Java semantics with property-based
