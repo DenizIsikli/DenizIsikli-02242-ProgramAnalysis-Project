@@ -1,8 +1,14 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluate whether region-based checking is sound in practice, how much of the input
-domain it certifies, and what the interval layer adds on top of an SMT solver.
+We split the research question into three sub-questions:
+\begin{description}
+  \item[RQ1 (soundness)] Does the checker ever give a wrong verdict in practice?
+  \item[RQ2 (coverage)] How much of the input domain does it certify, compared with one SMT
+        query over the whole domain and with differential testing?
+  \item[RQ3 (layers)] What does each layer contribute: what do the intervals add on top of
+        the solver, and the solver on top of the intervals, and at what cost?
+\end{description}
 
 \subsection{Setup}
 \label{sec:setup}
@@ -71,52 +77,21 @@ single run. All 184 unit and property tests of the analysis pass.
   \end{tabular}
 \end{table}
 
-\begin{table}
-  \centering
-  \caption{Verdict (\textsf{P}reserved, \textsf{C}hanged, \textsf{U}nknown) and certified
-  coverage in \% per pair, for the small (S) and large (L) domain. \emph{Truth} is the
-  exhaustive result on the small domain. Groups: corpus, \code{Simple}, \code{EvalPairs}.}
-  \label{tab:perpair}
-  \footnotesize
-  \setlength{\tabcolsep}{3.5pt}
-  \begin{tabular}{@{}ll rr rr rr rr@{}} \toprule
-    & & \multicolumn{2}{c}{gate} & \multicolumn{2}{c}{hybrid} & \multicolumn{2}{c}{z3only} & \multicolumn{2}{c}{random} \\
-    \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(lr){9-10}
-    Pair & Truth & S & L & S & L & S & L & S & L \\ \midrule
-\code{safeDiv} & eq & P\,100 & U\,46 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{ratio} & diff & C\,100 & C\,26 & C\,100 & C\,100 & C\,2 & C\,$<$1 & C\,2 & U\,0 \\
-\code{sign} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\code{absVal} & diff & C\,100 & C\,50 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\code{belowTwo} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\code{reciprocal} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\code{addTemps} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{deadCode} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{absBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{maxBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\midrule
-\code{justAdd/justAdd} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{justAdd/justMulitply} & diff & C\,100 & C\,91 & C\,100 & C\,91 & C\,2 & C\,$<$1 & C\,2 & C\,$<$1 \\
-\code{divideByN/divideByN} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{checkBeforeDivByN/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\code{checkBeforeDivByN2/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
-\midrule
-\code{loopDiv/\_guarded} & diff & C\,76 & C\,50 & C\,76 & C\,50 & U\,0 & U\,0 & C\,2 & C\,$<$1 \\
-\code{loopDiv/\_rewritten} & eq & U\,76 & U\,50 & U\,76 & U\,50 & U\,0 & U\,0 & U\,0 & U\,0 \\
-\code{loopThenZero} & eq & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 & U\,0 & U\,0 \\
-\code{ladder/\_reordered} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
-\code{ladder/\_changed} & eq & P\,100 & C\,100 & P\,100 & C\,100 & P\,100 & C\,$<$1 & U\,0 & C\,$<$1 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
-\Cref{tab:results} summarises the 160 runs and \cref{tab:perpair} lists every pair.
+\Cref{tab:results} summarises the 160 runs, and \cref{tab:perpair} in \cref{app:perpair} lists every pair.
+
+\paragraph{RQ1: Soundness}
 \textbf{No configuration produced a wrong verdict.} All 73 witnesses behind \chg{}
 verdicts replay as real differences, including those on the large domain. In a separate
 run of the pair harness, with a matched 5\,s budget per pair and witnesses checked against
 the real-JVM observations, the analyser and seeded differential testing both pass all 10
 corpus pairs on the declared domains. With at most 49 inputs per pair,
-testing can be exhaustive there.
+testing can be exhaustive there. The pair \code{ladder/\_changed} shows that a verdict is
+only about its domain. The edit changes a constant that lies outside $[-3,3]$, so the pair
+is \pres{} on the small domain and \chg{} on the large one, and all four configurations
+agree with that.
 
+\paragraph{RQ2: Coverage}
 On the large domain the hybrid decides 19 of 20 pairs and certifies 95\% of the inputs on
 average, against 17 of 20 and 40\% for one SMT query over the domain and 9 of 20 and under
 1\% for random testing. The gap in coverage comes from the \chg{} pairs. z3only and random
@@ -124,7 +99,7 @@ certify only their witness, while the hybrid also proves the rest of the domain.
 \code{ratio} that means 48 of 49 inputs \pres{}; on the large domain it means all but the
 one input $(0,0)$ of four million. Random testing misses this difference on the large domain.
 
-\paragraph{Loops}
+\paragraph{RQ3: Loops}
 The symbolic executor rejects backward jumps, so z3only answers \unk{} on all three loop
 pairs. The interval layer still decides two of them. Both versions of \code{loopThenZero}
 end in \code{s / 0} after a counting loop that provably terminates, so their outcome set is
@@ -133,7 +108,7 @@ For \code{loopDiv} with an added guard, splitting at $d = 0$ isolates a region w
 disjoint outcome sets, which gives a whole-region \chg{} and certifies 76\% (small) and 50\%
 (large) of the inputs.
 
-\paragraph{Cost}
+\paragraph{RQ3: Cost}
 On loop-free pairs one SMT query is the fastest way to a verdict: z3only needs 533\,ms for
 all large-domain runs, and the hybrid needs 2782\,ms. The extra time buys coverage. After a
 witness is found the hybrid keeps splitting and querying, which costs most on
@@ -146,22 +121,16 @@ without Rule~3 it decides only 13 of the 20 large-domain pairs.
 
 The answer to the research question is yes, with a qualification. Region-based checking
 was sound on every run, and it is the only configuration that both decides most pairs and
-says \emph{where} an edit changes behaviour. The two layers complement each other. The
-intervals decide every region where outcome classes differ or coincide on a single error,
-and they handle loops the solver cannot enter. The solver decides the regions where both
-versions return and the question is about the value. Each layer alone falls short: without
-the solver, the gate decides none of the five preserving corpus pairs on the large
-domain, because their return values are not constant and intervals cannot relate the two
-versions. Without the gate, z3only cannot handle loops and gives no coverage beyond a
-witness.
-
-The qualification is that the hybrid is not the cheapest way to a yes/no verdict on
-loop-free code; z3only is faster there. Its advantage is coverage and explanation, plus
-loops. The many-path pairs did not cause path explosion, because infeasible paths are
-pruned early, so we make no claim about scalability in the number of paths. One pair,
-\code{loopDiv/\_rewritten}, stays \unk{} for every configuration: both versions return a
-value that depends on the loop, which neither intervals nor loop-free symbolic execution can
-relate.
+says \emph{where} an edit changes behaviour. The layers complement each other: the
+intervals decide regions where outcome classes differ or coincide on a single error, and
+they handle loops; the solver decides regions where both versions return and only the
+value is in question. Alone, each falls short. Without the solver the gate decides none of
+the five preserving corpus pairs on the large domain, because intervals cannot relate the
+two versions, and without the gate z3only cannot handle loops or certify more than a
+witness. The qualification is that z3only is the faster way to a yes/no verdict on
+loop-free code. The many-path pairs caused no path explosion, so we make no claim about
+scalability in the number of paths. \code{loopDiv/\_rewritten} stays \unk{} everywhere:
+both versions return a loop-dependent value that neither layer can relate.
 
 \subsection{Threats to Validity}
 \label{sec:threats}
@@ -174,8 +143,11 @@ witness, and testing the interval operations against Java semantics with propert
 tests. For the \code{Simple} and \code{EvalPairs} groups the ground truth comes from our
 Python interpreter. That interpreter is tested against the real-JVM observations, but
 only on the corpus. On the large domain a \pres{} verdict is only spot-checked by sampling,
-so a soundness bug that affects few inputs could go unnoticed there. Times come from a
-single run on a shared VM and include Python start-up effects.
+so a soundness bug that affects few inputs could go unnoticed there. The proofs in
+\cref{sec:guarantees} are not mechanised. Code review found one gap between proof and
+code: exception tables were ignored, so a caught division gave a false \chg{}; methods with
+handlers are now rejected. Times come from one run on a shared VM; on a second machine they
+were up to twice as high, with identical verdicts, coverages and query counts.
 
 \paragraph{External}
 The 20 pairs are small, static, \code{int}-only and call-free, and the domains are boxes

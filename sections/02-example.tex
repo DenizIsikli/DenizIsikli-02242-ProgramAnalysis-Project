@@ -16,8 +16,8 @@ $d = -1 \neq 0$, so both versions divide by zero and \emph{agree}. They disagree
 one input, $(0,0)$, where $A$ returns $0$ and $B$ throws.
 
 \paragraph{What the existing analyses report}
-An outcome analysis in the \jpamb{} style gives $\set{\ok, \dbz}$ for both versions on $D$,
-and so does a perfectly precise one. Comparing outcome sets therefore suggests the edit is
+For both versions on $D$, an outcome analysis in the \jpamb{} style gives the outcome set
+$\set{\ok, \dbz}$, and so does a perfectly precise one. Comparing outcome sets therefore suggests the edit is
 safe. A single SMT query over $D$ that encodes both outcome and return value does find
 $(0,0)$, but it stops there: it certifies one input of 49 (2\%), and the developer learns
 nothing about the rest. Differential testing with 1000 random inputs finds $(0,0)$ on $D$
@@ -78,10 +78,16 @@ and coverage again reaches 100\%.
 
 \paragraph{A value-only change}
 The second kind of edit our approach targets is one where both versions always finish
-normally. In the corpus pair \code{sign}, the edit replaces
-\code{if (x < 0) return -1; return 0;} by \code{return -1;}. Both versions have outcome set
-$\set{\ok}$ and return interval $[-1,1]$ on every domain, so no outcome-based analysis can
-see the change: the difference lies in the \emph{relation} between input and output. Our
-checker splits at the constant $0$. On the point region $x \in [0,0]$ the return intervals
-are $[0,0]$ and $[-1,-1]$, which are disjoint, so that region is \chg{}. On $x \leq -1$ and
-$x \geq 1$ both versions return the same constant, so those regions are \pres{}.
+normally. The corpus pair \code{sign} computes the sign of \code{x} with
+\code{if (x > 0) return 1; if (x < 0) return -1; return 0;}. The edit deletes the second
+test, so the method ends in \code{return -1}, and at $x = 0$ it returns $-1$ instead of
+$0$. Both versions have outcome set $\set{\ok}$ and return interval $[-1,1]$ on every
+domain, so no outcome-based analysis can see the change: the difference lies in the
+\emph{relation} between input and output. On the whole domain the return query finds the
+witness $x = 0$, which replays (Rule~3$'$). That proves the change but certifies one input,
+so the checker keeps splitting at the constants of the code. On the point region
+$x \in [0,0]$ the return intervals are $[0,0]$ and $[-1,-1]$, which are disjoint, so that
+region is \chg{} (Rule~2b). On the regions below and above $0$ both versions return the
+same constant, $-1$ or $1$, so those regions are \pres{} (Rule~2b$'$). One input is
+\chg{}, the other six are \pres{}, and coverage is 100\%. Even without the solver the
+splitting alone reaches the same map.

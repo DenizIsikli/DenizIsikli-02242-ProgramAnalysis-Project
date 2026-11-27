@@ -1,0 +1,40 @@
+\section{Per-Pair Results}
+\label{app:perpair}
+
+\begin{table}[h]
+  \centering
+  \caption{Verdict (\textsf{P}reserved, \textsf{C}hanged, \textsf{U}nknown) and certified
+  coverage in \% per pair, for the small (S) and large (L) domain. \emph{Truth} is the
+  exhaustive result on the small domain. Groups: corpus, \code{Simple}, \code{EvalPairs}.}
+  \label{tab:perpair}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabular}{@{}ll rr rr rr rr@{}} \toprule
+    & & \multicolumn{2}{c}{gate} & \multicolumn{2}{c}{hybrid} & \multicolumn{2}{c}{z3only} & \multicolumn{2}{c}{random} \\
+    \cmidrule(lr){3-4} \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(lr){9-10}
+    Pair & Truth & S & L & S & L & S & L & S & L \\ \midrule
+\code{safeDiv} & eq & P\,100 & U\,46 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{ratio} & diff & C\,100 & C\,26 & C\,100 & C\,100 & C\,2 & C\,$<$1 & C\,2 & U\,0 \\
+\code{sign} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{absVal} & diff & C\,100 & C\,50 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{belowTwo} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{reciprocal} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{addTemps} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{deadCode} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{absBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{maxBranch} & eq & P\,100 & U\,$<$1 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\midrule
+\code{justAdd/justAdd} & eq & P\,100 & U\,0 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{justAdd/justMulitply} & diff & C\,100 & C\,91 & C\,100 & C\,91 & C\,2 & C\,$<$1 & C\,2 & C\,$<$1 \\
+\code{divideByN/divideByN} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{checkBeforeDivByN/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\code{checkBeforeDivByN2/divByN} & diff & C\,100 & C\,100 & C\,100 & C\,100 & C\,14 & C\,$<$1 & C\,14 & C\,$<$1 \\
+\midrule
+\code{loopDiv/\_guarded} & diff & C\,76 & C\,50 & C\,76 & C\,50 & U\,0 & U\,0 & C\,2 & C\,$<$1 \\
+\code{loopDiv/\_rewritten} & eq & U\,76 & U\,50 & U\,76 & U\,50 & U\,0 & U\,0 & U\,0 & U\,0 \\
+\code{loopThenZero} & eq & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 & U\,0 & U\,0 \\
+\code{ladder/\_reordered} & eq & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & P\,100 & U\,0 & U\,0 \\
+\code{ladder/\_changed} & eq & P\,100 & C\,100 & P\,100 & C\,100 & P\,100 & C\,$<$1 & U\,0 & C\,$<$1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

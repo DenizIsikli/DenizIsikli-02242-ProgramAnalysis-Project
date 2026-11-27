@@ -34,11 +34,9 @@
     \draw[->] (replay) -- (split);
     \draw[->] (split) -- (q);
   \end{tikzpicture}
-  \caption{Overview. Each region is first given to the interval analysis of both versions. The
-  verdict rules decide it or pass it on; only regions where both versions provably return
-  normally reach the solver. A replayed witness is kept, and its region is still split so the
-  rest of it can be certified. Regions that are undecided (\emph{no}, or a solver
-  \emph{unknown}) are split as well. Splitting stops at a region budget.}
+  \caption{Overview. The verdict rules decide a region from the interval analyses of both
+  versions; only regions where both provably return normally reach the solver. Undecided
+  regions, and regions with a replayed witness, are split until a region budget is reached.}
   \label{fig:overview}
 \end{figure}
 
@@ -81,9 +79,9 @@ Symbolic execution~\citep{king1976symbolic} runs a program on symbolic inputs an
 for each feasible path $\pi$, a path condition and a symbolic result. Two loop-free
 methods can then be compared by asking an SMT solver whether some input satisfies a path
 condition of each version and makes the results differ. Java \code{int} arithmetic wraps,
-so we encode values as 32-bit bit-vectors: \code{bvsdiv} and \code{bvsrem} truncate toward
-zero like \code{idiv} and \code{irem}, including $\mathit{MIN} / {-1} = \mathit{MIN}$.
-Unbounded integers would give wrong answers near the limits.
+so we use 32-bit bit-vectors, whose \code{bvsdiv} and \code{bvsrem} match \code{idiv} and
+\code{irem}, including $\mathit{MIN} / {-1} = \mathit{MIN}$; unbounded integers give wrong
+answers near the limits.
 
 \subsection{Formal Description}
 \label{sec:formal}
@@ -94,13 +92,11 @@ $\hat P(R)$ and a return interval $\hat r_P(R)$. It is a forward worklist interp
 over bytecode offsets. The abstract state at each offset is a tuple of intervals for the
 locals and a stack of values, and the initial state maps parameter $i$ to $I_i$.
 \begin{itemize}
-  \item \textbf{Arithmetic.} $+$, $-$, $\times$ and negation compute the exact mathematical
-        bounds and return $\top$ if a bound leaves the \code{int} range, since a wrapped
-        result could then be any value. For $X / Y$ and $X \,\%\, Y$ we add \dbz{} to the
-        outcomes iff $0 \in Y$. We split $Y \setminus \set{0}$ into a negative part and a
-        positive part and join the results of the two parts. On a part with fixed sign the
-        quotient is monotone in each argument, so its extremes are at the four corners. The
-        result is $\top$ if $\mathit{MIN} \in X$ and $-1 \in Y$.
+  \item \textbf{Arithmetic.} $+$, $-$, $\times$ and negation compute the mathematical
+        bounds and return $\top$ if a bound leaves the \code{int} range. For $X / Y$ and
+        $X \,\%\, Y$ we add \dbz{} iff $0 \in Y$, compute the result separately on the
+        negative and the positive part of $Y \setminus \set{0}$, and join
+        (\cref{thm:intervals}).
   \item \textbf{Branch refinement.} A conditional branch on $X \bowtie Y$ is followed on
         each side with $X, Y$ narrowed by the condition or its negation; an empty
         interval marks the side as infeasible. Narrowing a stack value is not enough, so
@@ -169,35 +165,92 @@ the fraction of $D$ in \pres{} regions, whole-region \chg{} regions and witness 
 \subsection{Theoretical Guarantees}
 \label{sec:guarantees}
 
-\paragraph{Soundness of the interval abstraction}
-Each transfer function satisfies the soundness condition above. For $+$, $-$ and $\times$,
-the mathematical result over a box is bounded by its corners, since the operation is
-monotone or linear in each argument. If both bounds lie in the \code{int} range, every Java
-result equals the mathematical one; otherwise the result is $\top$, which contains every
-wrapped value. For division, \code{idiv} throws iff $y = 0$, so ``\dbz{} iff $0 \in Y$'' is
-exact in both directions. On each fixed-sign part of $Y$, $q(x,y) = \mathit{trunc}(x/y)$
-is monotone in $x$ for fixed $y$ and attains its extreme over $y$ at an endpoint, so the
-corners bound it. Also $|q| \le |x|$, so only $\mathit{MIN}/{-1}$ can overflow, and that
-case returns $\top$. For remainder we use that $x \,\%\, y$ has the sign of $x$ and
-satisfies $|x \,\%\, y| < |y|$ and $|x \,\%\, y| \le |x|$. Branch refinement keeps every
-pair $(x,y)$ that satisfies the condition, for example $x < y \le d \Rightarrow x \le d-1$.
-The $\mathit{src}$ tag is sound because it holds only while the stack value equals the
-current content of the local. We checked every operation with property-based tests and with
-a brute-force check of about 3.9 million cases on intervals with endpoints near $0$,
-$\mathit{MIN}$ and $\mathit{MAX}$; there were no failures.
+The checker rests on two abstractions. The \emph{interval abstraction} abstracts sets of
+\code{int} values. The \emph{region abstraction} abstracts the observation function of a
+version on a box: it maps $\mathit{obs}_P$ restricted to $R$ to the pair
+$(\hat P(R), \hat r_P(R))$, with concretisation
+$\gamma(O, r) = \set{(o, v) \mid o \in O,\; o = \ok \Rightarrow v \in \gamma(r)}$. We prove
+both sound, prove that widening terminates, and derive the correctness of the verdicts.
 
-\paragraph{Termination of widening}
-$X \nabla Y$ keeps each bound that did not grow and moves the other to its limit, so
-$X \sqsubseteq X \nabla Y$ and $Y \sqsubseteq X \nabla Y$. Along any widening chain each
-of the two bounds of each of the $k$ slots at a loop head changes at most once. The state
-there changes at most $2k$ times, so the worklist terminates. The counting-loop pattern is
-sound for \code{*}: the body runs only when $i < n \le \mathit{MAX}$, so $i+1$ cannot wrap,
-and $n - i$ is a natural number that decreases by one on each iteration. The pattern
-\code{i <= n} is rejected, because with $n = \mathit{MAX}$ it never exits.
+\begin{theorem}[Interval transfer functions]
+\label{thm:intervals}
+Each abstract operation $+^\sharp, -^\sharp, \times^\sharp, /^\sharp, \%^\sharp$ and
+$-^\sharp$ (negation) satisfies the soundness condition of \cref{sec:background}, and
+$/^\sharp$ and $\%^\sharp$ report \dbz{} iff $0 \in Y$.
+\end{theorem}
+\begin{proof}
+Let $X = [a,b]$ and $Y = [c,d]$. For $+$, $-$ and $\times$ the mathematical result over the
+box $X \times Y$ is bounded by its corners: $+$ and $-$ are monotone in each argument, and
+$\times$ is linear in each argument, so its extremes lie at corners. If both bounds lie in
+the \code{int} range, every Java result equals the mathematical one; otherwise the result
+is $\top$, which contains every wrapped value. Negation is the case $[-b,-a]$, and only
+$-\mathit{MIN}$ wraps. For division, \code{idiv} throws iff $y = 0$, so ``\dbz{} iff
+$0 \in Y$'' is exact in both directions. Only $y \in Y \setminus \set{0}$ reaches the
+quotient, and this set is the union of a negative and a positive interval, so it suffices
+to bound each part and join. On a part with fixed sign, $q(x,y) = \mathit{trunc}(x/y)$ is
+monotone in $x$ for fixed $y$ and, for fixed $x$, attains its extreme over $y$ at an
+endpoint, so the four corners bound it. Since $|q| \le |x|$, only $\mathit{MIN}/{-1}$ can
+overflow, and that case returns $\top$. For remainder, Java guarantees that $x \,\%\, y$ is
+$0$ or has the sign of $x$, that $|x \,\%\, y| \le |y| - 1$ and that $|x \,\%\, y| \le |x|$.
+With $m = \max(|c|,|d|) - 1$ on a part this gives the bounds
+$[\,0 \text{ or } \max(a,-m),\; 0 \text{ or } \min(b,m)\,]$ that we compute.
+\end{proof}
+
+\begin{lemma}[Branch refinement]
+\label{lem:refine}
+For every $x \in X$, $y \in Y$ with $(x \bowtie y) = h$, the refined intervals
+$(X', Y')$ contain $x$ and $y$.
+\end{lemma}
+\begin{proof}
+The case $h = \mathit{false}$ uses the negated condition, which on integers is again one
+of $=, \neq, <, \le, >, \ge$. For each condition, the bounds follow directly, for example
+$x < y \le d \Rightarrow x \le d - 1$ and $y > x \ge a \Rightarrow y \ge a + 1$; for $=$
+both values lie in $X \cap Y$. For $\neq$ we only remove a value $v$ from $X$ when
+$Y = [v,v]$ and $v$ is an endpoint of $X$. Narrowing the local named by the
+$\mathit{src}$ tag is sound because the tag is set by a load and cleared by every write to
+that local, so it holds only while the stack value equals the current content of the local.
+\end{proof}
+
+\begin{theorem}[Widening terminates]
+\label{thm:widening}
+$X \sqsubseteq X \nabla Y$ and $Y \sqsubseteq X \nabla Y$, and every chain
+$X_0, X_1 = X_0 \nabla Y_1, X_2 = X_1 \nabla Y_2, \ldots$ is eventually constant.
+\end{theorem}
+\begin{proof}
+$X \nabla Y$ keeps each bound of $X$ that $Y$ does not exceed and moves the other bound to
+$\mathit{MIN}$ or $\mathit{MAX}$, so it contains both arguments. Along a chain each of the
+two bounds changes at most once, from its current value to its limit, after which it
+cannot grow. A chain therefore changes at most twice. With $k$ locals and stack slots at a
+loop head, the abstract state there changes at most $2k$ times, so the worklist, which only
+revisits a program point when its state grows, terminates.
+\end{proof}
+
+\begin{theorem}[Soundness of the region analysis]
+\label{thm:region}
+For every supported $P$, non-empty region $R$ and $x \in R$:
+$\mathit{out}_P(x) \in \hat P(R)$, and $\mathit{ret}_P(x) \in \gamma(\hat r_P(R))$ if
+$\mathit{out}_P(x) = \ok$. We call this property (S).
+\end{theorem}
+\begin{proof}
+We show the invariant that every concrete state $(\mathit{pc}, \mathit{locals},
+\mathit{stack})$ reached from an input in $R$ is in the concretisation of the abstract
+state stored at $\mathit{pc}$, interval by interval. It holds initially, since parameter
+$i$ starts in $I_i$. Each instruction preserves it by \cref{thm:intervals} and
+\cref{lem:refine}, and joins and widenings only enlarge states (\cref{thm:widening}). At
+the fixpoint the invariant covers every reachable state. Each concrete step that ends the
+method is matched by an abstract one: a \code{return} adds \ok{} and joins the returned
+interval into $\hat r_P$, a division adds \dbz{} whenever its divisor may be $0$, and
+constructing an \code{AssertionError} adds \code{assertion error}. Methods with exception
+handlers are rejected, so every exception escapes. A non-terminating execution must follow
+some backward edge infinitely often, and the analysis adds \code{*} for every reachable
+backward edge except a counting loop. Such a loop runs its body only while
+$i < n \le \mathit{MAX}$, so $i + 1$ cannot wrap and $n - i$ decreases by one in every
+iteration. The pattern \code{i <= n} is rejected because with $n = \mathit{MAX}$ it never
+exits.
+\end{proof}
 
 \paragraph{Soundness of the verdicts}
-Let (S) be the soundness of the region analysis: for all $x \in R$,
-$\mathit{out}_P(x) \in \hat P(R)$, and $\mathit{ret}_P(x) \in \hat r_P(R)$ if $P$ returns.
+With (S), the verdict rules are correct.
 \begin{itemize}
   \item \emph{Rule 1.} By (S), both versions end in $e$ on every $x \in R$. Error
         observations carry no value, so $\mathit{obs}_A(x) = (e,\bot) = \mathit{obs}_B(x)$.
@@ -206,7 +259,7 @@ $\mathit{out}_P(x) \in \hat P(R)$, and $\mathit{ret}_P(x) \in \hat r_P(R)$ if $P
         for every $x$. Rule~0 must run first, since an empty set would make Rule~2 fire
         vacuously.
   \item \emph{Rules 2b and 2b$'$.} These are the same arguments applied to the return
-        intervals.
+        intervals; an empty return interval is treated like Rule~0.
   \item \emph{Rule 3.} Suppose the versions disagree on some $x \in R$. Both return
         normally, so $\mathit{ret}_A(x) \neq \mathit{ret}_B(x)$. The paths are complete
         (checked) and execution is deterministic, so $x$ satisfies exactly one
@@ -220,4 +273,6 @@ bounds the number of regions. Children partition their parent, so coverage count
 input once. Hence a \pres{} verdict is a proof over all of $D$, and a \chg{} verdict always
 comes with a replayed witness. The checker is not complete: intervals cannot relate two
 variables, so non-constant return values need the solver, and loops with loop-dependent
-return values stay \unk{}.
+return values stay \unk{}. Besides the proofs, we checked every interval operation with
+property-based tests and with a brute-force check of about 3.9 million cases on intervals
+with endpoints near $0$, $\mathit{MIN}$ and $\mathit{MAX}$; there were no failures.

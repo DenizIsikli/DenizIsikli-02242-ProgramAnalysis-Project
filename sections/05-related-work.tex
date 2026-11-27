@@ -9,8 +9,7 @@ SymDiff~\citep{lahiri2012symdiff} translates both versions to an intermediate ve
 language and checks equivalence with an SMT solver, reporting a counterexample when the
 versions differ. Both give one verdict for the whole input space. Our Rule~3 is such a
 check, but we only ask it on regions where the interval layer has already shown that both
-versions return normally. That makes the query smaller, and the rest of the domain still
-receives a verdict when the versions differ.
+versions return normally, so the rest of the domain still receives a verdict.
 
 \paragraph{Differential symbolic execution and partitioning}
 Differential symbolic execution~\citep{person2008dse} summarises both versions symbolically
@@ -24,9 +23,8 @@ different, so the result is useful even when the whole program cannot be decided
 PASDA~\citep{glock2024pasda} extends partition-based differencing with best-effort
 classifications for partitions that cannot be proved. We share the goal of per-region
 verdicts, but our partitions are boxes produced by splitting at code constants, and many of
-them are decided by an abstract interpretation without any path enumeration. This is what
-lets us decide loop pairs such as \code{loopThenZero}, where path-based partitioning would
-have to unroll.
+them are decided by an abstract interpretation without path enumeration, which also
+decides loop pairs such as \code{loopThenZero}.
 
 \paragraph{Abstract interpretation of differences}
 \citet{partush2013abstract} analyse the \emph{correlating program} of two versions with
@@ -35,26 +33,27 @@ $x_A = x_B$ directly. \citet{trostanetski2017modular} compute under- and
 over-approximations of the input sets on which two versions differ, procedure by procedure,
 and refine summaries on demand. Both are more precise than our approach on loops, because
 they relate the two executions inside the abstract domain. We deliberately analyse each
-version separately with plain intervals and leave relations to the solver. The domain stays
-simple and its proofs short, and the price is the \unk{} we report for
-\code{loopDiv/\_rewritten}.
+version separately with plain intervals and leave relations to the solver, at the price of
+the \unk{} for \code{loopDiv/\_rewritten}.
 
 \paragraph{Scaling to real code}
-DiffKemp~\citep{malik2021diffkemp} checks semantic equivalence of functions across versions
-of the Linux kernel. It combines pattern matching for known semantics-preserving changes
-with light-weight static analysis, and it trades completeness for scale. Our checker targets
-the opposite end, small methods with proofs, and could serve as a precise back-end for
-functions such a tool cannot match.
+DiffKemp~\citep{malik2021diffkemp} checks the equivalence of Linux kernel functions across
+versions with pattern matching and light-weight static analysis, trading completeness for
+scale. Our checker targets the opposite end, small methods with proofs.
 
 \paragraph{Alternatives from the course}
-We considered three other techniques from the lectures. \emph{Sign analysis} is too coarse:
-it cannot isolate $(0,0)$ or prove that two return values are equal. A \emph{relational
-domain} such as octagons~\citep{mine2006octagon} on a product program could prove some
-preserved loop pairs, but it needs a product construction and much more involved soundness
-and widening proofs. We chose intervals, whose proofs we could complete, and moved the
-relational reasoning to the solver. \emph{Coverage-guided fuzzing} would improve the testing
-baseline, but like differential testing~\citep{mckeeman1998differential} it can only refute
-equivalence and can never prove a region \pres{}. Our refinement loop is related to
-counterexample-guided abstraction refinement~\citep{clarke2000cegar}, but it refines the
-\emph{input partition} instead of the abstraction, which keeps the abstract domain fixed and
-the argument for termination simple.
+A \emph{syntactic analysis} (a bytecode diff, or patterns for known refactorings) cannot
+tell that deleting \code{if (d == 0) return 0} matters only at $(0,0)$; we use syntax only
+to collect the split constants. A \emph{bounded static analysis} silently drops long traces,
+which breaks the soundness that Rules~1 and~2 need, so we use the unbounded analysis with
+widening. \emph{Concolic execution} and \emph{coverage-guided fuzzing} would find better
+witnesses than random testing, but like differential
+testing~\citep{mckeeman1998differential} they can refute equivalence and never prove a
+region \pres{}. \emph{Context-sensitive analysis} addresses calls, which our contract
+excludes, and \emph{sign analysis} cannot isolate $(0,0)$. A \emph{relational domain} such
+as octagons~\citep{mine2006octagon} on a product program could prove some preserved loop
+pairs, but needs a product construction and much harder soundness and widening proofs. We
+chose intervals, whose proofs we could complete, and moved the relational reasoning to the
+solver. Our refinement loop resembles counterexample-guided abstraction
+refinement~\citep{clarke2000cegar}, but it refines the \emph{input partition} instead of the
+abstraction, which keeps the domain fixed and termination simple.

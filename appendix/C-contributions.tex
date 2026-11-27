@@ -1,29 +1,40 @@
 \section{Technical Contributions}
 \label{app:contributions}
-% One row per technical contribution, using the codes from the project page.
-% Points per contribution follow the formula on the project page (respect the max).
-% Grade thresholds per student:
+% Codes, maxima and formulas from the project page. Distribution as in the accepted
+% proposal. Grade thresholds per student:
 %   12: >=20 points across 5 contributions
 %   10: >=15 points across 4 contributions
 %    7: >=10 points across 3 contributions
 %    4: >= 7 points across 3 contributions
 %   02: >= 5 points across 3 contributions
-% Note: PMG gives 0 points for a group of 3 (3 per person over 3).
 
 \begin{table}[h]
   \centering
-  \caption{Contributions. $S_1$ is Deniz Isikli (s215818), $S_2$ is Cristina Semikina (s260209), $S_3$ is Krish Devendra Waghresha (s252788).}
+  \caption{Technical contributions. $P$ is the points for the group (the project-page
+  maximum in parentheses). $S_1$ is Deniz Isikli (s215818), $S_2$ is Cristina Semikina
+  (s260209), $S_3$ is Krish Devendra Waghresha (s252788).}
   \label{tab:contributions}
-  \begin{tabular}{@{}llrrrr@{}} \toprule
-    ID & Contribution & P & $S_1$ & $S_2$ & $S_3$ \\ \midrule
-    \texttt{XXX} & Contribution & 0 & 0 & 0 & 0 \\
-    \texttt{XXX} & Contribution & 0 & 0 & 0 & 0 \\
-    \texttt{XXX} & Contribution & 0 & 0 & 0 & 0 \\
-    \texttt{XXX} & Contribution & 0 & 0 & 0 & 0 \\
-    \texttt{XXX} & Contribution & 0 & 0 & 0 & 0 \\
-    \texttt{PWP} & Write Paper & 0 & 0 & 0 & 0 \\
-    \texttt{PRW} & Read and relate to recent papers & 0 & 0 & 0 & 0 \\ \midrule
-    \multicolumn{2}{l}{Total} & 0 & 0 & 0 & 0 \\
-    \multicolumn{2}{l}{Suggested Max Grade} & - & - & - & - \\ \bottomrule
+  \small
+  \begin{tabular}{@{}lllrrrr@{}} \toprule
+    ID & Contribution & Where & $P$ & $S_1$ & $S_2$ & $S_3$ \\ \midrule
+    \texttt{IAB} & Implement novel abstractions & \cref{sec:formal} & 10 (10) & 0 & 4 & 6 \\
+    \texttt{IBA} & Implement unbounded static analysis & \cref{sec:formal} & 7 (7) & 0 & 1 & 6 \\
+    \texttt{NAN} & Integrate analyses & \cref{sec:formal} & 5 (15) & 0 & 2 & 3 \\
+    \texttt{NTS} & Analysis-informed test synthesis & \cref{sec:formal,sec:setup} & 10 (10) & 0 & 6 & 4 \\
+    \texttt{TAB} & Prove abstractions correct & \cref{thm:intervals,thm:region} & 10 (10) & 8 & 2 & 0 \\
+    \texttt{TWI} & Prove termination of widening & \cref{thm:widening} & 5 (10) & 5 & 0 & 0 \\
+    \texttt{EST} & Statistical analysis of results & \cref{sec:results} & 5 (5) & 1 & 4 & 0 \\
+    \texttt{PEX} & Find illustrating examples & \cref{sec:example} & 4 (4) & 2 & 0 & 2 \\
+    \texttt{PRW} & Read and relate to recent papers & \cref{sec:related} & 5 (10) & 3 & 1 & 1 \\
+    \texttt{PWP} & Write paper & whole paper & 10 (10) & 4 & 4 & 2 \\ \midrule
+    \multicolumn{3}{l}{Total} & 71 & 23 & 24 & 24 \\
+    \multicolumn{3}{l}{Number of contributions} & & 6 & 8 & 7 \\
+    \multicolumn{3}{l}{Suggested max grade} & & 12 & 12 & 12 \\ \bottomrule
   \end{tabular}
 \end{table}
+
+The abstractions behind \texttt{IAB} and \texttt{TAB} are the interval abstraction of
+\code{int} values and the region abstraction of a version's observations on a box. The
+integrated analyses behind \texttt{NAN} are the interval analysis and the symbolic return
+comparison: the first decides which regions the second is asked about. The examples behind
+\texttt{PEX} are \code{ratio} and \code{sign} (\cref{sec:example}).

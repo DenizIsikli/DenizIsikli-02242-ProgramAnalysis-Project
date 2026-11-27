@@ -1,6 +1,6 @@
 # 02242 - Program Analysis Final Project
 
-Group XX: Deniz Isikli (s215818), Cristina Semikina (s260209), Krish Devendra Waghresha (s252788)
+Group 18: Deniz Isikli (s215818), Cristina Semikina (s260209), Krish Devendra Waghresha (s252788)
 
 Compile `main.tex` (Overleaf: upload the zip as a new project; main document is `main.tex`).
 
@@ -17,6 +17,7 @@ Compile `main.tex` (Overleaf: upload the zip as a new project; main document is 
 | `appendix/A-data-availability.tex` | Data availability | appendix |
 | `appendix/B-ai-statement.tex` | AI-use statement | appendix |
 | `appendix/C-contributions.tex` | Technical contributions table | appendix |
+| `appendix/D-per-pair.tex` | Per-pair results table | appendix |
 | `references.bib` | Bibliography | – |
 | `figures/` | Images (`\includegraphics{name}`) | – |
 
