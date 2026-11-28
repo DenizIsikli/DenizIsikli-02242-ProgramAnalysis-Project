@@ -1,12 +1,12 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-We split the research question into three sub-questions:
+We split the research question into three sub-questions.
 \begin{description}
   \item[RQ1 (soundness)] Does the checker ever give a wrong verdict in practice?
   \item[RQ2 (coverage)] How much of the input domain does it certify, compared with one SMT
         query over the whole domain and with differential testing?
-  \item[RQ3 (layers)] What does each layer contribute: what do the intervals add on top of
+  \item[RQ3 (layers)] What does each layer contribute? What do the intervals add on top of
         the solver, and the solver on top of the intervals, and at what cost?
 \end{description}
 
@@ -14,47 +14,51 @@ We split the research question into three sub-questions:
 \label{sec:setup}
 
 \paragraph{Benchmarks}
-We use 20 method pairs in three groups. The \emph{corpus} (\code{Refactorings.java}) holds
-10 pairs written for this project: 5 preserving edits (inlining a temporary, removing dead
-code, inverting a branch, reversing a \code{max} comparison, and an unchanged pair), 3
-value-only faults (\code{sign}, \code{absVal}, an off-by-one comparison \code{belowTwo})
-and 2 exception faults (guard removals in \code{ratio} and \code{reciprocal}). For the
-corpus, ground truth comes from the real JVM: a Java harness runs both versions with
-\code{-ea} on all 238 inputs of the declared domains and records outcome and return value.
-An answer key written by hand is checked against these observations. Five pairs are taken
-from the stock \jpamb{} class \code{Simple}; two of them compare a method with itself and act as controls. Five evaluation-only pairs
-(\code{EvalPairs.java}) contain loops (\code{loopDiv} with an added guard or a rewritten
-body, and \code{loopThenZero}) or many paths (\code{ladder}: twelve sequential \code{if}s,
-reordered or with one constant changed).
+We use 20 method pairs in three groups. The \emph{corpus} (\code{Refactorings.java}) holds 10
+pairs that we wrote for this project. Five are preserving edits: inlining a temporary,
+removing dead code, inverting a branch, reversing a \code{max} comparison, and an unchanged
+pair. Three are value-only faults: \code{sign}, \code{absVal} and an off-by-one comparison
+\code{belowTwo}. Two are exception faults: guard removals in \code{ratio} and
+\code{reciprocal}. For the corpus, ground truth comes from the real JVM. A Java harness runs
+both versions with \code{-ea} on all 238 inputs of the declared domains and records outcome
+and return value. We check a hand-written answer key against these observations. Five pairs
+come from the stock \jpamb{} class \code{Simple}. Two of them compare a method with itself and
+act as controls. Five evaluation-only pairs (\code{EvalPairs.java}) contain loops or many
+paths. The loop pairs are \code{loopDiv} with an added guard, \code{loopDiv} with a rewritten
+body, and \code{loopThenZero}. The many-path pairs are two versions of \code{ladder}, which has
+twelve sequential \code{if} statements. One version reorders them and the other changes one
+constant.
 
 \paragraph{Configurations}
-We compare four configurations on each pair:
+We compare four configurations on each pair.
 \begin{itemize}
-  \item \textbf{gate}: intervals, verdict rules 0--2b$'$ and refinement, no solver;
-  \item \textbf{hybrid}: our full approach;
-  \item \textbf{z3only}: one SMT query over the whole domain that encodes both the error
-        paths and the returning paths, so it compares outcome class and value together. This
-        is a differential-symbolic-execution style baseline~\citep{person2008dse} without
-        the interval layer;
-  \item \textbf{random}: differential testing~\citep{mckeeman1998differential} with 1000
+  \item \code{gate}: intervals, verdict rules 0 to 2b$'$ and refinement, without the solver.
+  \item \code{hybrid}: our full approach.
+  \item \code{z3only}: one SMT query over the whole domain. It encodes both the error paths
+        and the returning paths, so it compares outcome class and value together. This is a
+        baseline in the style of differential symbolic execution~\citep{person2008dse},
+        without the interval layer.
+  \item \code{random}: differential testing~\citep{mckeeman1998differential} with 1000
         uniformly random inputs (seed 0) on a concrete interpreter with Java \code{int}
-        semantics. Without a difference it answers \unk{}, never \pres{}.
+        semantics. Without a difference it answers \unk{} and never \pres{}.
 \end{itemize}
-Every pair is run on a \emph{small} domain $[-3,3]^k$, where ground truth comes from
-exhaustive execution, and on a \emph{large} domain $[-1000,1000]^k$ (up to 4 million
-inputs). On the large domain a \pres{} verdict is checked against 2000 random inputs. Solver witnesses (Rule~3$'$) are replayed; whole-region \chg{} verdicts are not.
+We run every pair on a \emph{small} domain $[-3,3]^k$ and on a \emph{large} domain
+$[-1000,1000]^k$, which has up to 4 million inputs. On the small domain ground truth comes
+from exhaustive execution. On the large domain we check a \pres{} verdict against 2000 random
+inputs. We replay solver witnesses (Rule~3$'$). We do not replay whole-region \chg{} verdicts.
 
 \paragraph{Metrics}
-A verdict is \emph{wrong} if it says \pres{} while a difference exists, or \chg{} without
-a real difference; \unk{} is never wrong. A pair is \emph{decided} if the verdict is not
-\unk{}. \emph{Certified coverage} is the fraction of the domain with a proved verdict
-(\cref{sec:formal}). For the baselines it is $1$ for \pres{} and one input for a witness.
-We also report wall-clock time, SMT queries and region analyses.
+A verdict is \emph{wrong} if it says \pres{} while a difference exists, or \chg{} without a
+real difference. An \unk{} verdict is never wrong. A pair is \emph{decided} if the verdict is
+not \unk{}. The \emph{certified coverage} is the fraction of the domain with a proved verdict
+(\cref{sec:formal}). For the baselines it is $1$ for \pres{} and one input for a witness. We
+also report wall-clock time, SMT queries and region analyses.
 
 \paragraph{Environment}
-Python~3.13 with the \jpamb{} 0.9.0 bytecode model, Z3 5.4.1, 5\,s timeout per SMT query,
-a budget of about 200 regions, on a laptop (Intel Core i5-1038NG7, 16\,GB, macOS). Times are from a single run; \cref{app:variance} has repeated
-timings.
+We use Python~3.13 with the \jpamb{} 0.9.0 bytecode model and Z3 5.4.1. The timeout is 5\,s
+per SMT query, and the region budget is about 200. We run on a laptop (Intel Core
+i5-1038NG7, 16\,GB, macOS). The times come from a single run. \Cref{app:variance} has
+repeated timings.
 
 \subsection{Results}
 \label{sec:results}
@@ -76,79 +80,82 @@ timings.
   \end{tabular}
 \end{table}
 
-
-\Cref{tab:results} summarises the 160 runs, and \cref{tab:perpair} in \cref{app:perpair} lists every pair.
+\Cref{tab:results} summarises the 160 runs. \Cref{tab:perpair} in \cref{app:perpair} lists
+every pair.
 
 \paragraph{RQ1: Soundness}
-\textbf{No configuration produced a wrong verdict}, checked per pair against exhaustive
-execution on the small domain and against 2000 samples on the large one. Solver witnesses
-replay by construction, since a model that does not replay is reported as \unk{}. In a separate
-run of the pair harness, with a matched 5\,s budget per pair and witnesses checked against
-the real-JVM observations, the analyser and seeded differential testing both pass all 10
-corpus pairs on the declared domains. With at most 49 inputs per pair,
-testing can be exhaustive there. The pair \code{ladder/\_changed} shows that a verdict is
-only about its domain. The edit changes a constant that lies outside $[-3,3]$, so the pair
-is \pres{} on the small domain and \chg{} on the large one, and all four configurations
-agree with that.
+No configuration produced a wrong verdict. We checked each pair against exhaustive execution
+on the small domain and against 2000 samples on the large one. Solver witnesses replay by
+construction, because we report a model that does not replay as \unk{}. We also ran the pair
+harness with a matched 5\,s budget per pair, and we checked its witnesses against the
+real-JVM observations. The analyser and seeded differential testing both pass all 10 corpus
+pairs on the declared domains. These domains have at most 49 inputs, so testing can be
+exhaustive there. The pair \code{ladder/\_changed} shows that a verdict holds only for its
+domain. The edit changes a constant that lies outside $[-3,3]$. The pair is therefore \pres{}
+on the small domain and \chg{} on the large one. All four configurations agree with that.
 
 \paragraph{RQ2: Coverage}
 On the large domain the hybrid decides 19 of 20 pairs and certifies 95\% of the inputs on
-average, against 17 of 20 and 40\% for one SMT query over the domain and 9 of 20 and under
-1\% for random testing. The gap in coverage comes from the \chg{} pairs. z3only and random
-certify only their witness, while the hybrid also proves the rest of the domain. For
-\code{ratio} that means 48 of 49 inputs \pres{}; on the large domain it means all but the
-one input $(0,0)$ of four million. Random testing finds it in none of 20 seeds (\cref{app:variance}).
+average. One SMT query over the domain decides 17 of 20 and certifies 40\%. Random testing
+decides 9 of 20 and certifies under 1\%. The gap in coverage comes from the \chg{} pairs. The
+\code{z3only} and \code{random} configurations certify only their witness. The hybrid also
+proves the rest of the domain. For \code{ratio} it proves 48 of 49 inputs \pres{} on the small
+domain. On the large domain it proves all but the one input $(0,0)$ of four million. Random
+testing finds this input in none of 20 seeds (\cref{app:variance}).
 
 \paragraph{RQ3: Loops}
-The symbolic executor rejects backward jumps, so z3only answers \unk{} on all three loop
-pairs. The interval layer still decides two of them. Both versions of \code{loopThenZero}
-end in \code{s / 0} after a counting loop that provably terminates, so their outcome set is
-$\set{\dbz}$ and Rule~1 proves the pair \pres{} on the whole domain in one region analysis.
-For \code{loopDiv} with an added guard, splitting at $d = 0$ isolates a region with
-disjoint outcome sets, which gives a whole-region \chg{} and certifies 76\% (small) and 50\%
-(large) of the inputs.
+The symbolic executor rejects backward jumps, so \code{z3only} answers \unk{} on all three
+loop pairs. The interval layer still decides two of them. Both versions of
+\code{loopThenZero} end in \code{s / 0} after a counting loop that provably terminates. Their
+outcome set is $\set{\dbz}$, and Rule~1 proves the pair \pres{} on the whole domain in one
+region analysis. For \code{loopDiv} with an added guard, we split at $d = 0$. This isolates a
+region with disjoint outcome sets, which gives a whole-region \chg{} verdict. It certifies
+76\% (small) and 50\% (large) of the inputs.
 
 \paragraph{RQ3: Cost}
-On loop-free pairs one SMT query is the fastest way to a verdict: z3only needs 1.3\,s for
-all large-domain runs, and the hybrid needs 6.4\,s. The extra time buys coverage. After a
-witness is found the hybrid keeps splitting and querying, which costs most in time on
-\code{justAdd/justMulitply} (144 queries, 2.7\,s) and \code{ladder/\_changed}. The two \code{loopDiv} pairs issue 190 queries each that fail at once on loops.
+On loop-free pairs one SMT query is the fastest way to a verdict. The \code{z3only}
+configuration needs 1.3\,s for all large-domain runs, and the hybrid needs 6.4\,s. The extra
+time buys coverage. After the hybrid finds a witness, it keeps splitting and querying. This
+costs most in time on \code{justAdd/justMulitply} (144 queries, 2.7\,s) and on
+\code{ladder/\_changed}. The two \code{loopDiv} pairs issue 190 queries each that fail at once
+on loops.
 
 \subsection{Discussion}
 \label{sec:discussion}
 
-On these 20 small, \code{int}-only pairs the answer to the research question is yes, with a qualification. Region-based checking
-was sound on every run, and it is the only configuration that both decides most pairs and
-says \emph{where} an edit changes behaviour. The layers complement each other: the
-intervals decide regions where outcome classes differ or coincide on a single error, and
-they handle loops; the solver decides regions where both versions return and only the
-value is in question. Alone, each falls short. Without the solver the gate decides none of
-the five preserving corpus pairs on the large domain, because intervals cannot relate the
-two versions, and without the gate z3only cannot handle loops or certify more than a
-witness. The qualification is that z3only is the faster way to a yes/no verdict on
-loop-free code. The many-path pairs caused no path explosion, so we make no claim about
-scalability in the number of paths. \code{loopDiv/\_rewritten} stays \unk{} everywhere:
-both versions return a loop-dependent value that neither layer can relate.
+On these 20 small, \code{int}-only pairs the answer to the research question is yes, with a
+qualification. No verdict was wrong on any run. The hybrid is the only configuration that
+both decides most pairs and says where an edit changes behaviour. The two layers complement
+each other. The intervals decide regions where the outcome classes differ or coincide on a
+single error, and they handle loops. The solver decides regions where both versions return and
+only the value is in question. Alone, each layer falls short. Without the solver, the gate
+decides none of the five preserving corpus pairs on the large domain, because intervals cannot
+relate the two versions. Without the gate, \code{z3only} cannot handle loops and certifies no
+more than a witness. The qualification is that \code{z3only} is the faster way to a yes or no
+verdict on loop-free code. The many-path pairs caused no path explosion, so we make no claim
+about scalability in the number of paths. The pair \code{loopDiv/\_rewritten} stays \unk{}
+everywhere. Both versions return a loop-dependent value that neither layer can relate.
 
 \subsection{Threats to Validity}
 \label{sec:threats}
 
 \paragraph{Internal}
-Coverage favours methods that localise (z3only stops at one witness), so decided runs are
-the primary measure. We wrote the corpus and the extra pairs ourselves, and the splitting heuristic uses the
-constants that appear in the code, which suits small hand-written pairs. We reduce the risk
-of bugs in the checker by taking the corpus ground truth from the real JVM, replaying solver
-witnesses, and testing the interval operations against Java semantics with property-based
-tests. For the \code{Simple} and \code{EvalPairs} groups the ground truth comes from our
-Python interpreter. That interpreter is tested against the real-JVM observations, but
-only on the corpus. On the large domain a \pres{} verdict is only spot-checked by sampling,
-so a soundness bug that affects few inputs could go unnoticed there. The proofs in
-\cref{sec:guarantees} are not mechanised. Code review found one gap between proof and
-code: exception tables were ignored, so a caught division gave a false \chg{}; methods with
-handlers are now rejected. Soundness assumes \code{-ea} and \code{javac}-shaped loops; a 10,000-step cap gives \emph{unsupported}.
+Coverage favours methods that localise, because \code{z3only} stops at one witness. We
+therefore treat decided runs as the primary measure. We wrote the corpus and the extra pairs
+ourselves. The splitting heuristic uses the constants that appear in the code, which suits
+small hand-written pairs. We reduce the risk of bugs in the checker in three ways. We take the
+corpus ground truth from the real JVM, we replay solver witnesses, and we test the interval
+operations against Java semantics with property-based tests. For the \code{Simple} and
+\code{EvalPairs} groups the ground truth comes from our Python interpreter. We tested that
+interpreter against the real-JVM observations, but only on the corpus. On the large domain we
+only spot-check a \pres{} verdict by sampling, so a soundness bug that affects few inputs could
+go unnoticed there. We did not mechanise the proofs in \cref{sec:guarantees}. Code review found
+one gap between proof and code. Exception tables were ignored, so a caught division gave a
+false \chg{} verdict. We now reject methods with handlers. Soundness assumes \code{-ea} and
+\code{javac}-shaped loops. A 10,000-step cap gives \emph{unsupported}.
 
 \paragraph{External}
-The 20 pairs are small, static, \code{int}-only and call-free, and the domains are boxes
-of at most $2001^2$ inputs. Real refactorings involve objects, calls and exceptions that are
-caught, which our observation contract excludes, so the results say nothing about them. A
-verdict holds only on the declared domain, not on all of \code{int}.
+The 20 pairs are small, static, \code{int}-only and call-free. The domains are boxes of at
+most $2001^2$ inputs. Real refactorings involve objects, calls and caught exceptions, which our
+observation contract excludes. The results say nothing about them. A verdict holds only on the
+declared domain, not on all of \code{int}.
