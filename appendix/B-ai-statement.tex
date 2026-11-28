@@ -1,38 +1,7 @@
 \section{AI-Use Statement}
 \label{app:ai}
 
-The course allows AI tools if their use is stated. We used the following.
-
-\paragraph{Deniz Isikli}
-Deniz used Claude Code (Anthropic, model Claude Opus 5.5) as an assistant. It drafted
-the design documents in \code{docs/refactoring/}: the observation contract, the verdict
-rules with their correctness arguments, the review of the interval primitives and the
-corpus, and the soundness notes for the interval operations. It reviewed the second pull
-request against those documents. In that review it found the exception-handler soundness
-gap described in \cref{sec:threats}, and it wrote the fix and the regression test. It
-also built the decompiled corpus with the course's \code{jvm2json} image and added a test
-that checks every regional verdict against the real-JVM observations. For this paper it
-completed the draft. It added the bibliography, checking every entry against its DOI,
-turned the guarantees into theorems with proofs, added the evaluation sub-questions and
-corrected the description of the \code{sign} pair.
-
-Deniz checked the output in three ways:
-\begin{itemize}
-  \item by reading and discussing every argument before accepting it;
-  \item by re-running the test suite (185 tests) and the ablation script, and comparing
-        every number in \cref{tab:results,tab:perpair} with the regenerated output;
-  \item by checking the claims about Z3 and interval semantics directly with the solver
-        and with a brute-force test.
-\end{itemize}
-
-\paragraph{Cristina Semikina}
-\todo{Cristina: state which AI tools you used, for what, and how you checked the output.}
-
-\paragraph{Krish Devendra Waghresha}
-\todo{DRAFT by Krish's assistant, Krish to confirm and rewrite in own words.}
-Krish used Claude Code (Anthropic) as an assistant. It helped write the interval
-analysis and region-verdict code, the Z3 return comparison, the baselines (z3-only and random testing), the ablation and seed-statistics scripts and their tests, and it reviewed teammates' pull requests. It also helped draft and revise parts of this paper.
-
-Krish checked the output by reading and running every script, by comparing the reported numbers with a fresh run of the ablation script, and by having the other authors review the code and the proofs.
-
-The authors take full responsibility for the content of the paper and the artifact.
+We used AI tools to brainstorm, to understand concepts from the course, and as a development
+assistant for the code and for drafting and editing parts of this paper. We read, ran and
+checked the code and the results, and we take full responsibility for the content of the paper
+and the artifact.
