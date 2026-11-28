@@ -3,8 +3,8 @@
 
 We ran random testing with 20 seeds on the 19 pair and domain runs that really differ
 (\code{evaluation/seed\_stats.py}, on a laptop with an Intel Core i5-1038NG7). On the small
-domain every seed found the difference (180 of 180), since 1000 draws from at most 49 inputs miss a given input with negligible probability. On
-the large domain the detection rate was 53\% (105 of 200 seeded runs) and depended on how many
+domain every seed found the difference (180 of 180). This is expected, because 1000 draws from at most 49 inputs miss a given input
+with negligible probability. On the large domain the detection rate was 53\% (105 of 200 seeded runs) and depended on how many
 inputs differ: 20 of 20 for \code{absVal}, \code{justAdd/justMulitply} and
 \code{ladder/\_changed}, 12 of 20 for \code{belowTwo}, 9 of 20 for \code{loopDiv/\_guarded}, 6 of
 20 for \code{sign}, \code{reciprocal} and both \code{checkBeforeDivideByN} variants, and 0 of 20
@@ -12,5 +12,5 @@ for \code{ratio}, which differs on one input in 4,004,001. A \chg{} answer from 
 therefore luck on exactly the single-point differences that motivate this work.
 
 Five repeats of every timing give a median total of about 9\,s for the hybrid and 2.4\,s for
-one SMT query on that laptop. They come from the same laptop as
+one SMT query on that laptop. The timings come from the same laptop as
 \cref{tab:results}.

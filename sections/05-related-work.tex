@@ -2,49 +2,47 @@
 \label{sec:related}
 
 \paragraph{Regression verification and equivalence checking}
-\citet{godlin2009regression} introduced \emph{regression verification}: proving that two
-closely related programs produce the same output for every input. They do it by pairing
-recursive calls and checking loop-free bodies with a bounded model checker.
-SymDiff~\citep{lahiri2012symdiff} translates both versions to an intermediate verification
-language and checks equivalence with an SMT solver, reporting a counterexample when the
-versions differ. Both give one verdict for the whole input space. Our Rule~3 is such a
-check, but we only ask it on regions where the interval layer has already shown that both
-versions return normally, so the rest of the domain still receives a verdict.
+\citet{godlin2009regression} introduced \emph{regression verification}, which proves that two
+closely related programs produce the same output for every input. They pair recursive calls
+and check loop-free bodies with a bounded model checker. SymDiff~\citep{lahiri2012symdiff}
+translates both versions to an intermediate verification language and checks equivalence with
+an SMT solver. It reports a counterexample when the versions differ. Both approaches give one
+verdict for the whole input space. Our Rule~3 is such a check. We ask it only on regions where
+the interval layer has already shown that both versions return normally. The rest of the
+domain then still receives a verdict.
 
 \paragraph{Differential symbolic execution and partitioning}
 Differential symbolic execution~\citep{person2008dse} summarises both versions symbolically
 and abstracts unchanged code with uninterpreted functions. ARDiff~\citep{badihi2020ardiff}
 refines those uninterpreted functions on demand when the abstraction is too coarse to decide
-equivalence. Our z3only baseline is plainer: whole-method SMT equivalence with no abstraction of common code. Partition-based regression
-verification~\citep{boehme2013prv} is the closest in spirit: it splits the input space into
-partitions with the same symbolic paths, and reports each partition as equivalent or
-different, so the result is useful even when the whole program cannot be decided.
-PASDA~\citep{glock2024pasda} extends partition-based differencing with best-effort
-classifications for partitions that cannot be proved. We share the goal of per-region
-verdicts, but our partitions are boxes produced by splitting at code constants, and many of
-them are decided by an abstract interpretation without path enumeration, which also
+equivalence. Our \code{z3only} baseline is plainer. It is whole-method SMT equivalence with no
+abstraction of common code. Partition-based regression verification~\citep{boehme2013prv} is
+the closest in spirit. It splits the input space into partitions with the same symbolic paths
+and reports each partition as equivalent or different. The result is useful even when the
+whole program cannot be decided. PASDA~\citep{glock2024pasda} extends partition-based
+differencing with best-effort classifications for partitions that cannot be proved. We share
+the goal of per-region verdicts. Our partitions are boxes that we produce by splitting at code
+constants. An abstract interpretation decides many of them without path enumeration. This also
 decides loop pairs such as \code{loopThenZero}.
 
 \paragraph{Abstract interpretation of differences}
 \citet{partush2013abstract} analyse the \emph{correlating program} of two versions with
-numerical abstract domains, so that the abstraction can express relations such as
-$x_A = x_B$ directly. \citet{trostanetski2017modular} compute under- and
-over-approximations of the input sets on which two versions differ, procedure by procedure,
-and refine summaries on demand. Partush and Yahav can express relations between the versions inside the abstract domain,
-which helps on loops. We deliberately analyse each
-version separately with plain intervals and leave relations to the solver, at the price of
-the \unk{} for \code{loopDiv/\_rewritten}.
+numerical abstract domains. The abstraction can then express relations such as $x_A = x_B$
+directly. \citet{trostanetski2017modular} compute under- and over-approximations of the input
+sets on which two versions differ. They work procedure by procedure and refine summaries on
+demand. Partush and Yahav can relate the two versions inside the abstract domain, which helps
+on loops. We analyse each version separately with plain intervals and leave relations to the
+solver. The price is the \unk{} verdict for \code{loopDiv/\_rewritten}.
 
 \paragraph{Alternatives from the course}
-A \emph{syntactic analysis} (a bytecode diff, or patterns for known refactorings) cannot
-tell that deleting \code{if (d == 0) return 0} matters only at $(0,0)$; we use syntax only
-to collect the split constants. A \emph{bounded static analysis} silently drops long traces,
-which breaks the soundness that Rules~1 and~2 need, so we use the unbounded analysis with
-widening. \emph{Concolic execution} and \emph{coverage-guided fuzzing} would find better
-witnesses than random testing, but like differential
-testing~\citep{mckeeman1998differential} they can refute equivalence and never prove a
-region \pres{}. A \emph{relational domain} such
+A \emph{syntactic analysis}, such as a bytecode diff or patterns for known refactorings,
+cannot tell that deleting \code{if (d == 0) return 0} matters only at $(0,0)$. We use syntax
+only to collect the split constants. A \emph{bounded static analysis} silently drops long
+traces. This breaks the soundness that Rules~1 and~2 need, so we use the unbounded analysis
+with widening. \emph{Concolic execution} and \emph{coverage-guided fuzzing} would find better
+witnesses than random testing. Like differential testing~\citep{mckeeman1998differential},
+they can refute equivalence but never prove a region \pres{}. A \emph{relational domain} such
 as octagons~\citep{mine2006octagon} on a product program could prove some preserved loop
-pairs, but needs a product construction and much harder soundness and widening proofs. We
-chose intervals, whose proofs we could complete, and moved the relational reasoning to the
+pairs. It needs a product construction and much harder soundness and widening proofs. We chose
+intervals, whose proofs we could complete, and we moved the relational reasoning to the
 solver.

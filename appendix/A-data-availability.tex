@@ -1,15 +1,17 @@
 \section{Data Availability}
 \label{app:data}
 
-The SMT timeout is 5\,s per query and 2\,s for path-feasibility checks. All code, benchmarks and results are in the public repository
-\url{https://github.com/DenizIsikli/02242-ProgramAnalysis-Project}, at commit \code{5f58fe3}. The analysis is in
-\code{solutions/static/src}: \code{abstractions.py}, \code{region\_analysis.py},
-\code{region\_verdict.py}, \code{symbolic.py} and \code{baselines.py}. The corpus is in
-\code{Refactorings.java} and \code{EvalPairs.java} under \code{cases/jpamb/cases}, and the
-real-JVM observations and the answer key are in \code{evaluation/}. The design documents with the full
-correctness arguments are in \code{docs/refactoring/}. With Python 3.13, a JDK (\code{javac} and \code{javap} on the path), and the
-dependencies \code{z3-solver}, \code{hypothesis} and \code{pytest} installed, run the
-following from the repository root:
+All code, benchmarks and results are in the public repository
+\url{https://github.com/DenizIsikli/02242-ProgramAnalysis-Project}, at commit \code{5f58fe3}.
+The analysis is in \code{solutions/static/src}: \code{abstractions.py},
+\code{region\_analysis.py}, \code{region\_verdict.py}, \code{symbolic.py} and
+\code{baselines.py}. The corpus is in \code{Refactorings.java} and \code{EvalPairs.java} under
+\code{cases/jpamb/cases}. The real-JVM observations and the answer key are in
+\code{evaluation/}. The design documents with the full correctness arguments are in
+\code{docs/refactoring/}. The SMT timeout is 5\,s per query and 2\,s for path-feasibility
+checks. To reproduce the results we need Python 3.13, a JDK (\code{javac} and \code{javap} on
+the path) and the packages \code{z3-solver}, \code{hypothesis} and \code{pytest}. We run the
+following commands from the repository root.
 \begin{lstlisting}[language=bash, numbers=none]
 export PYTHONPATH=solutions/static/src:src
 python -m pytest solutions/static/tests -q          # 185 tests

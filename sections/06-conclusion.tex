@@ -2,7 +2,8 @@
 \label{sec:conclusion}
 
 We asked whether an edit preserves the behaviour of a method, and where it does not. Our
-checker decides boxes of inputs with interval analyses and sound verdict rules, and asks a
-bit-vector SMT solver only about return values. On 20 pairs and two domains no verdict
-contradicted the ground truth and the mean certified coverage was 96\%, against 45\% for one SMT query
-and 2\% for differential testing, including loop pairs that symbolic execution rejects.
+checker decides boxes of inputs with interval analyses and sound verdict rules. It asks a
+bit-vector SMT solver only about return values. On 20 pairs and two domains, no verdict
+contradicted the ground truth. The mean certified coverage was 96\%, against 45\% for one SMT
+query and 2\% for differential testing. The checker also decides loop pairs that our symbolic
+executor rejects.

@@ -21,7 +21,7 @@ pair. Three are value-only faults: \code{sign}, \code{absVal} and an off-by-one 
 \code{belowTwo}. Two are exception faults: guard removals in \code{ratio} and
 \code{reciprocal}. For the corpus, ground truth comes from the real JVM. A Java harness runs
 both versions with \code{-ea} on all 238 inputs of the declared domains and records outcome
-and return value. We check a hand-written answer key against these observations. Five pairs
+and return value. Five pairs
 come from the stock \jpamb{} class \code{Simple}. Two of them compare a method with itself and
 act as controls. Five evaluation-only pairs (\code{EvalPairs.java}) contain loops or many
 paths. The loop pairs are \code{loopDiv} with an added guard, \code{loopDiv} with a rewritten
@@ -51,14 +51,12 @@ inputs. We replay solver witnesses (Rule~3$'$). We do not replay whole-region \c
 A verdict is \emph{wrong} if it says \pres{} while a difference exists, or \chg{} without a
 real difference. An \unk{} verdict is never wrong. A pair is \emph{decided} if the verdict is
 not \unk{}. The \emph{certified coverage} is the fraction of the domain with a proved verdict
-(\cref{sec:formal}). For the baselines it is $1$ for \pres{} and one input for a witness. We
-also report wall-clock time, SMT queries and region analyses.
+(\cref{sec:formal}). For the baselines it is $1$ for \pres{} and one input for a witness.
 
 \paragraph{Environment}
-We use Python~3.13 with the \jpamb{} 0.9.0 bytecode model and Z3 5.4.1. The timeout is 5\,s
-per SMT query, and the region budget is about 200. We run on a laptop (Intel Core
-i5-1038NG7, 16\,GB, macOS). The times come from a single run. \Cref{app:variance} has
-repeated timings.
+We use Python~3.13, the \jpamb{} 0.9.0 bytecode model and Z3 5.4.1, with a 5\,s timeout per
+SMT query and a region budget of about 200. We run on a laptop (Intel Core i5-1038NG7, 16\,GB,
+macOS). The times come from a single run. \Cref{app:variance} has repeated timings.
 
 \subsection{Results}
 \label{sec:results}
@@ -86,11 +84,9 @@ every pair.
 \paragraph{RQ1: Soundness}
 No configuration produced a wrong verdict. We checked each pair against exhaustive execution
 on the small domain and against 2000 samples on the large one. Solver witnesses replay by
-construction, because we report a model that does not replay as \unk{}. We also ran the pair
-harness with a matched 5\,s budget per pair, and we checked its witnesses against the
-real-JVM observations. The analyser and seeded differential testing both pass all 10 corpus
-pairs on the declared domains. These domains have at most 49 inputs, so testing can be
-exhaustive there. The pair \code{ladder/\_changed} shows that a verdict holds only for its
+construction, because we report a model that does not replay as \unk{}. The pair harness, with a
+matched 5\,s budget per pair, passes all 10 corpus pairs for both the analyser and seeded
+differential testing. The pair \code{ladder/\_changed} shows that a verdict holds only for its
 domain. The edit changes a constant that lies outside $[-3,3]$. The pair is therefore \pres{}
 on the small domain and \chg{} on the large one. All four configurations agree with that.
 
