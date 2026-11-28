@@ -8,8 +8,8 @@ analyses the original and the edited JVM method independently with an interval a
 interpreter on a box of inputs. Sound verdict rules turn the two outcome sets into
 \pres{}, \chg{} or \unk{} for the whole box. Undecided boxes are split at the constants
 of the code, and only regions where both versions provably return normally are passed to
-a 32-bit bit-vector SMT query over their return values. Every counterexample is replayed
-concretely. On 20 method pairs over two input domains, with ground truth from exhaustive
+a 32-bit bit-vector SMT query over their return values. Every counterexample found by the solver
+is replayed concretely. On 20 method pairs over two input domains, with ground truth from exhaustive
 execution, the checker never gives a wrong verdict. It decides 38 of 40 pair/domain
 combinations and certifies 96\% of the inputs on average. One SMT query over the whole
 domain decides 34 and certifies 45\%, and differential testing decides 18 and certifies

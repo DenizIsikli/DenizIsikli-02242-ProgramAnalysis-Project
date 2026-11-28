@@ -271,8 +271,8 @@ With (S), the verdict rules are correct.
 Refinement terminates because every split strictly shrinks a finite region and the budget
 bounds the number of regions. Children partition their parent, so coverage counts each
 input once. Hence a \pres{} verdict is a proof over all of $D$, and a \chg{} verdict always
-comes with a replayed witness. The checker is not complete: intervals cannot relate two
+comes with a witness, either a replayed solver model or a point of a region that differs everywhere. The checker is not complete: intervals cannot relate two
 variables, so non-constant return values need the solver, and loops with loop-dependent
 return values stay \unk{}. Besides the proofs, we checked every interval operation with
-property-based tests and with a brute-force check of about 3.9 million cases on intervals
-with endpoints near $0$, $\mathit{MIN}$ and $\mathit{MAX}$; there were no failures.
+property-based tests and with brute-force checks on intervals with endpoints near $0$,
+$\mathit{MIN}$ and $\mathit{MAX}$.
