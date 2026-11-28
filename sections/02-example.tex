@@ -9,41 +9,42 @@ static int ratio(int a, int b) {         static int ratio_edited(int a, int b) {
 }                                        }
 \end{lstlisting}
 
-\Cref{lst:example} shows the original $A$ (left) and the edited version $B$ (right). Both
-take two \code{int}s, and we check them on the domain $D = [-3,3]^2$ (49 inputs). The
-original also throws on some inputs: for $(0,-1)$ the larger argument is $0$ and
-$d = -1 \neq 0$, so both versions divide by zero and \emph{agree}. They disagree on exactly
-one input, $(0,0)$, where $A$ returns $0$ and $B$ throws.
+\Cref{lst:example} shows the original method $A$ on the left and the edited method $B$ on the
+right. Both take two \code{int} values. We check them on the domain $D = [-3,3]^2$, which has 49
+inputs. The original also throws on some inputs. For $(0,-1)$ the larger argument is $0$ and
+$d = -1 \neq 0$, so both versions divide by zero and agree. The two versions disagree on
+exactly one input, $(0,0)$. There $A$ returns $0$ and $B$ throws.
 
 \paragraph{What the existing analyses report}
-For both versions on $D$, an outcome analysis in the \jpamb{} style gives the outcome set
-$\set{\ok, \dbz}$, and so does a perfectly precise one. Comparing outcome sets therefore suggests the edit is
-safe. A single SMT query over $D$ that encodes both outcome and return value does find
-$(0,0)$, but it stops there: it certifies one input of 49 (2\%), and the developer learns
-nothing about the rest. Differential testing with 1000 random inputs finds $(0,0)$ on $D$
-after 78 runs, but on $[-1000,1000]^2$ it misses it and can only answer \unk{}.
+An outcome analysis in the \jpamb{} style gives the outcome set $\set{\ok, \dbz}$ for both
+versions on $D$. A perfectly precise outcome analysis gives the same set. Comparing outcome
+sets therefore suggests that the edit is safe. A single SMT query over $D$ that encodes both
+outcome and return value does find $(0,0)$. It stops there and certifies one input of 49
+(2\%). The developer learns nothing about the other inputs. Differential testing with 1000
+random inputs finds $(0,0)$ on $D$ after 78 runs. On $[-1000,1000]^2$ it misses the input and
+can only answer \unk{}.
 
 \paragraph{What our checker reports}
-\Cref{fig:ratio} shows the regions our checker produces. The constants in the code are
-$\set{0}$, so the first split cuts $a$ into $[-3,-1]$, $[0,0]$ and $[1,3]$, and the next
-splits cut $b$ in the boxes with $a \le 0$. Each resulting box is then decided:
+\Cref{fig:ratio} shows the regions our checker produces. The only constant in the code is
+$0$. The first split cuts $a$ into $[-3,-1]$, $[0,0]$ and $[1,3]$. The next splits cut $b$ in
+the boxes with $a \le 0$. The checker then decides each box:
 \begin{itemize}
-  \item On $a \in [0,0], b \in [0,0]$ the interval analysis gives $\set{\ok}$ for $A$
-        (refining $d = 0$ selects the guard) and $\set{\dbz}$ for $B$ (the divisor is the
-        interval $[0,0]$). The sets are disjoint, so the box is \chg{} on \emph{every}
+  \item On $a \in [0,0], b \in [0,0]$ the interval analysis gives $\set{\ok}$ for $A$, because
+        refining $d = 0$ selects the guard. It gives $\set{\dbz}$ for $B$, because the divisor
+        is the interval $[0,0]$. The outcome sets are disjoint, so the box is \chg{} on every
         input and $(0,0)$ is a witness (Rule~2 in \cref{sec:formal}).
-  \item On $a \in [-3,-1], b \in [0,0]$ and on $a \in [0,0], b \in [-3,-1]$ the larger
-        argument is $0$ and $d \neq 0$, so both versions have outcome set
-        $\set{\dbz}$: the box is \pres{} without looking at values (Rule~1).
-  \item The four remaining boxes have outcome set $\set{\ok}$ for both versions, but the
-        return intervals overlap. Here, and only here, the checker asks Z3 whether some
-        input in the box makes the return values differ. All four queries are UNSAT, so the
-        boxes are \pres{} (Rule~3).
+  \item On $a \in [-3,-1], b \in [0,0]$ and on $a \in [0,0], b \in [-3,-1]$ the larger argument
+        is $0$ and $d \neq 0$. Both versions have the outcome set $\set{\dbz}$, so the box is
+        \pres{} without looking at values (Rule~1).
+  \item The four remaining boxes have the outcome set $\set{\ok}$ for both versions, but the
+        return intervals overlap. Only here does the checker ask Z3 whether some input in the
+        box gives different return values. All four queries are UNSAT, so the boxes are
+        \pres{} (Rule~3).
 \end{itemize}
-The verdict is \chg{} with witness $(0,0)$ and a certified coverage of 100\%: 48 inputs
-are proved \pres{} and one is proved \chg{}. This took 10 region analyses and 4 SMT
-queries. On $[-1000,1000]^2$ the same 10 regions and 4 queries arise,
-and coverage again reaches 100\%.
+The verdict is \chg{} with witness $(0,0)$, and the certified coverage is 100\%. We prove 48
+inputs \pres{} and one \chg{}. This takes 10 region analyses and 4 SMT queries. On
+$[-1000,1000]^2$ the same 10 regions and 4 queries arise, and the coverage again reaches
+100\%.
 
 \begin{figure}
   \centering
@@ -77,17 +78,15 @@ and coverage again reaches 100\%.
 \end{figure}
 
 \paragraph{A value-only change}
-The second kind of edit our approach targets is one where both versions always finish
-normally. The corpus pair \code{sign} computes the sign of \code{x} with
-\code{if (x > 0) return 1; if (x < 0) return -1; return 0;}. The edit deletes the second
-test, so the method ends in \code{return -1}, and at $x = 0$ it returns $-1$ instead of
-$0$. Both versions have outcome set $\set{\ok}$ and return interval $[-1,1]$ on every
-domain, so no outcome-based analysis can see the change: the difference lies in the
-\emph{relation} between input and output. On the whole domain the return query finds the
-witness $x = 0$, which replays (Rule~3$'$). That proves the change but certifies one input,
-so the checker keeps splitting at the constants of the code. On the point region
-$x \in [0,0]$ the return intervals are $[0,0]$ and $[-1,-1]$, which are disjoint, so that
-region is \chg{} (Rule~2b). On the regions below and above $0$ both versions return the
-same constant, $-1$ or $1$, so those regions are \pres{} (Rule~2b$'$). One input is
-\chg{}, the other six are \pres{}, and coverage is 100\%. Even without the solver the
-splitting alone reaches the same map.
+The second kind of edit has both versions finish normally. The corpus pair \code{sign}
+computes the sign of \code{x} with \code{if (x > 0) return 1; if (x < 0) return -1; return 0;}.
+The edit deletes the second test, so the method ends in \code{return -1}. At $x = 0$ it now
+returns $-1$ instead of $0$. Both versions have the outcome set $\set{\ok}$ and the return
+interval $[-1,1]$ on every domain. No outcome-based analysis can see the change, because the
+difference lies in the relation between input and output. On the whole domain the return query
+finds the witness $x = 0$, which replays (Rule~3$'$). This proves the change but certifies one
+input, so the checker keeps splitting at the constants of the code. On the point region
+$x \in [0,0]$ the return intervals are $[0,0]$ and $[-1,-1]$. They are disjoint, so that region
+is \chg{} (Rule~2b). Below and above $0$ both versions return the same constant, $-1$ or $1$,
+so those regions are \pres{} (Rule~2b$'$). One input is \chg{} and the other six are \pres{}, so
+the coverage is 100\%. The splitting alone reaches the same map without the solver.
