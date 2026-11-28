@@ -26,7 +26,7 @@ after 78 runs, but on $[-1000,1000]^2$ it misses it and can only answer \unk{}.
 \paragraph{What our checker reports}
 \Cref{fig:ratio} shows the regions our checker produces. The constants in the code are
 $\set{0}$, so the first split cuts $a$ into $[-3,-1]$, $[0,0]$ and $[1,3]$, and the next
-splits cut $b$ the same way. Each resulting box is then decided:
+splits cut $b$ in the boxes with $a \le 0$. Each resulting box is then decided:
 \begin{itemize}
   \item On $a \in [0,0], b \in [0,0]$ the interval analysis gives $\set{\ok}$ for $A$
         (refining $d = 0$ selects the guard) and $\set{\dbz}$ for $B$ (the divisor is the
@@ -42,12 +42,12 @@ splits cut $b$ the same way. Each resulting box is then decided:
 \end{itemize}
 The verdict is \chg{} with witness $(0,0)$ and a certified coverage of 100\%: 48 inputs
 are proved \pres{} and one is proved \chg{}. This took 10 region analyses and 4 SMT
-queries. On $[-1000,1000]^2$ the region structure is the same, so the cost is the same,
+queries. On $[-1000,1000]^2$ the same 10 regions and 4 queries arise,
 and coverage again reaches 100\%.
 
 \begin{figure}
   \centering
-  \begin{tikzpicture}[x=0.42cm, y=0.42cm, font=\scriptsize]
+  \begin{tikzpicture}[x=0.36cm, y=0.36cm, font=\scriptsize]
     \def\cell#1#2#3{\fill[#3] (#1,#2) rectangle ++(1,1);}
     % b on x-axis (-3..3 -> 0..6), a on y-axis (-3..3 -> 0..6)
     \fill[blue!12] (0,0) rectangle (3,3);   % a<0, b<0: SMT

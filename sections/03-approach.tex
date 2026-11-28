@@ -110,7 +110,7 @@ locals and a stack of values, and the initial state maps parameter $i$ to $I_i$.
         adds the outcome \code{*} (``may not terminate''), unless the loop matches the
         counting pattern \code{javac} emits for \code{for (i = ..; i < n; i++)}. That
         pattern is a single exit test \code{i >= n}, a straight-line body with exactly one
-        \code{i += 1}, and no writes to \code{i} or \code{n}. Such a loop always exits.
+        \code{i += 1}, and no writes to \code{i} or \code{n}. Such a loop always exits. The code also accepts the mirrored decreasing counter; we prove only the increasing case.
   \item \textbf{Unsupported code.} Any other instruction makes the result
         \emph{unsupported}, with the full outcome set and $\top$ returns. No rule can
         then fire.
@@ -157,7 +157,7 @@ split by \code{split\_region}. For the first parameter whose interval strictly c
 constant $c$ pushed by either version (or $0$), it produces $[l, c-1]$, $[c,c]$ and
 $[c+1, u]$. Without such a constant it bisects the widest interval. The children are
 disjoint and cover the parent. A region decided by Rule~3$'$ keeps its witness but is still
-split, so the rest of it can be certified. A budget (200 regions by default) bounds the
+split, so the rest of it can be certified. A budget (about 200 regions by default) bounds the
 loop; regions left over stay \unk{}. The pair verdict is \chg{} if any witness exists,
 \pres{} if \pres{} regions cover $D$, and \unk{} otherwise. The \emph{certified coverage} is
 the fraction of $D$ in \pres{} regions, whole-region \chg{} regions and witness points.

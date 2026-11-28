@@ -15,8 +15,7 @@ versions return normally, so the rest of the domain still receives a verdict.
 Differential symbolic execution~\citep{person2008dse} summarises both versions symbolically
 and abstracts unchanged code with uninterpreted functions. ARDiff~\citep{badihi2020ardiff}
 refines those uninterpreted functions on demand when the abstraction is too coarse to decide
-equivalence. Our z3only baseline is a simplified version of this idea without the
-abstraction of common code. Partition-based regression
+equivalence. Our z3only baseline is plainer: whole-method SMT equivalence with no abstraction of common code. Partition-based regression
 verification~\citep{boehme2013prv} is the closest in spirit: it splits the input space into
 partitions with the same symbolic paths, and reports each partition as equivalent or
 different, so the result is useful even when the whole program cannot be decided.
@@ -31,15 +30,10 @@ decides loop pairs such as \code{loopThenZero}.
 numerical abstract domains, so that the abstraction can express relations such as
 $x_A = x_B$ directly. \citet{trostanetski2017modular} compute under- and
 over-approximations of the input sets on which two versions differ, procedure by procedure,
-and refine summaries on demand. Both are more precise than our approach on loops, because
-they relate the two executions inside the abstract domain. We deliberately analyse each
+and refine summaries on demand. Partush and Yahav can express relations between the versions inside the abstract domain,
+which helps on loops. We deliberately analyse each
 version separately with plain intervals and leave relations to the solver, at the price of
 the \unk{} for \code{loopDiv/\_rewritten}.
-
-\paragraph{Scaling to real code}
-DiffKemp~\citep{malik2021diffkemp} checks the equivalence of Linux kernel functions across
-versions with pattern matching and light-weight static analysis, trading completeness for
-scale. We target small methods with proofs.
 
 \paragraph{Alternatives from the course}
 A \emph{syntactic analysis} (a bytecode diff, or patterns for known refactorings) cannot
@@ -49,11 +43,8 @@ which breaks the soundness that Rules~1 and~2 need, so we use the unbounded anal
 widening. \emph{Concolic execution} and \emph{coverage-guided fuzzing} would find better
 witnesses than random testing, but like differential
 testing~\citep{mckeeman1998differential} they can refute equivalence and never prove a
-region \pres{}. \emph{Context-sensitive analysis} addresses calls, which our contract
-excludes, and \emph{sign analysis} cannot isolate $(0,0)$. A \emph{relational domain} such
+region \pres{}. A \emph{relational domain} such
 as octagons~\citep{mine2006octagon} on a product program could prove some preserved loop
 pairs, but needs a product construction and much harder soundness and widening proofs. We
 chose intervals, whose proofs we could complete, and moved the relational reasoning to the
-solver. Our refinement loop resembles counterexample-guided abstraction
-refinement~\citep{clarke2000cegar}, but it refines the \emph{input partition} instead of the
-abstraction, which keeps the domain fixed and termination simple.
+solver.

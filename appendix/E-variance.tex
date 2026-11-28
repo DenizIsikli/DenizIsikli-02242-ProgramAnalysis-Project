@@ -3,7 +3,7 @@
 
 We ran random testing with 20 seeds on the 19 pair and domain runs that really differ
 (\code{evaluation/seed\_stats.py}, on a laptop with an Intel Core i5-1038NG7). On the small
-domain every seed found the difference (180 of 180), since 1000 inputs cover at most 49. On
+domain every seed found the difference (180 of 180), since 1000 draws from at most 49 inputs miss a given input with negligible probability. On
 the large domain the detection rate was 53\% (105 of 200 seeded runs) and depended on how many
 inputs differ: 20 of 20 for \code{absVal}, \code{justAdd/justMulitply} and
 \code{ladder/\_changed}, 12 of 20 for \code{belowTwo}, 9 of 20 for \code{loopDiv/\_guarded}, 6 of

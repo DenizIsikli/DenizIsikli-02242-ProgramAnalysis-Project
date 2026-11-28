@@ -16,10 +16,10 @@ The \jpamb{} setting~\citep{kalhauge2026jpamb} predicts the \emph{set} of outcom
 method (\code{ok}, \code{divide by zero}, \ldots). In the example both versions have the
 outcome set $\set{\ok, \dbz}$, so comparing outcome sets says ``no change'', which is
 wrong. Equivalence checking with symbolic execution and an SMT
-solver~\citep{king1976symbolic,godlin2009regression,lahiri2012symdiff} compares return
+solver~\citep{godlin2009regression,lahiri2012symdiff} compares return
 values as well, but it gives one verdict for the whole input space. When the methods
-differ, it reports one counterexample and says nothing about the other 48 inputs. When
-the methods contain loops, unrolled symbolic execution cannot prove equivalence at all.
+differ, it reports one counterexample and says nothing about the other 48 inputs. A
+loop-free symbolic encoding, as in our baseline, has no answer once the methods contain loops.
 
 \paragraph{Research question}
 \emph{Can we soundly decide whether a method edit preserves behaviour, and \emph{where} in
@@ -30,7 +30,7 @@ input domain than one solver query over the whole domain or differential testing
 \paragraph{Our approach}
 We split the declared input domain into boxes (\emph{regions}) and analyse the original
 method $A$ and the edited method $B$ independently on each box with an interval abstract
-interpreter~\citep{cousot1977abstract} for JVM bytecode. Four verdict rules turn the two
+interpreter~\citep{cousot1977abstract} for JVM bytecode. Verdict rules turn the two
 sound outcome over-approximations into a verdict for the \emph{whole} box: equal singleton
 error sets prove agreement, and disjoint outcome sets (or disjoint return intervals) prove
 disagreement on every input. Boxes the rules cannot decide are split at the constants that

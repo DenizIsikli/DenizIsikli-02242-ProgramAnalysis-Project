@@ -1,7 +1,7 @@
 \section{Data Availability}
 \label{app:data}
 
-All code, benchmarks and results are in the public repository
+The SMT timeout is 5\,s per query and 2\,s for path-feasibility checks. All code, benchmarks and results are in the public repository
 \url{https://github.com/DenizIsikli/02242-ProgramAnalysis-Project}, at commit \code{5f58fe3}. The analysis is in
 \code{solutions/static/src}: \code{abstractions.py}, \code{region\_analysis.py},
 \code{region\_verdict.py}, \code{symbolic.py} and \code{baselines.py}. The corpus is in
@@ -12,10 +12,10 @@ dependencies \code{z3-solver}, \code{hypothesis} and \code{pytest} installed, ru
 following from the repository root:
 \begin{lstlisting}[language=bash, numbers=none]
 export PYTHONPATH=solutions/static/src:src
-python -m pytest solutions/static/tests -q          # 184 tests
+python -m pytest solutions/static/tests -q          # 185 tests
 bash evaluation/observe.sh                          # real-JVM observations
 python evaluation/check_expected.py                 # check the answer key
 python solutions/static/src/check_pairs.py --budget-seconds 5 --seed 0
-python evaluation/ablation.py --csv ablation.csv    # Tables 1 and 2
+python evaluation/ablation.py --csv ablation.csv    # Table 1 and the per-pair table
 python evaluation/seed_stats.py --seeds 20 --repeats 5   # variance paragraph
 \end{lstlisting}
