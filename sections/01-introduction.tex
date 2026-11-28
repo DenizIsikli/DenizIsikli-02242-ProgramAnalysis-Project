@@ -1,59 +1,62 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Small edits that are meant to preserve behaviour are among the most common changes to a
-code base: inlining a temporary variable, inverting a condition and swapping its branches,
-or deleting a guard that looks redundant. Whether such an edit really is a refactoring is a
-question about \emph{every} input, while tests only sample a few. Consider the edit in
-\cref{lst:example} (\cref{sec:example}). The developer deletes the guard
-\code{if (d == 0) return 0}, reasoning that $0 / x = 0$ anyway. The reasoning fails at
-exactly one input in the domain $[-3,3]^2$: at $(a,b)=(0,0)$ the divisor is also $0$.
-Random testing over $[-1000,1000]^2$ has a one-in-four-million chance per run of hitting
-that input, and in our evaluation it does not find it in 1000 runs.
+Much code is now written with AI assistance, and developers maintain code that they did not
+write line by line. This code often contains more than is needed, such as extra guards,
+redundant checks and repeated logic. Developers therefore simplify it by refactoring. A
+refactoring is useful only if it is reliable, which means that it keeps the behaviour of the
+program. Deciding whether an edit keeps the behaviour is the problem we address in this paper.
 
-Program analysis can do better, but each standard tool answers a slightly wrong question.
-The \jpamb{} setting~\citep{kalhauge2026jpamb} predicts the \emph{set} of outcomes of a
-method (\code{ok}, \code{divide by zero}, \ldots). In the example both versions have the
-outcome set $\set{\ok, \dbz}$, so comparing outcome sets says ``no change'', which is
-wrong. Equivalence checking with symbolic execution and an SMT
-solver~\citep{godlin2009regression,lahiri2012symdiff} compares return
-values as well, but it gives one verdict for the whole input space. When the methods
-differ, it reports one counterexample and says nothing about the other 48 inputs. A
-loop-free symbolic encoding, as in our baseline, has no answer once the methods contain loops.
+Consider the edit in \cref{lst:example} (\cref{sec:example}). The developer deletes the guard
+\code{if (d == 0) return 0}. The guard looks redundant, because $0 / x = 0$. The edit is wrong
+at one input in the domain $[-3,3]^2$. At $(a,b)=(0,0)$ the divisor is also $0$. Random testing
+over $[-1000,1000]^2$ has a one-in-four-million chance per run of hitting this input. In our
+evaluation it does not find the input in 1000 runs.
+
+Existing analyses answer related but different questions. The \jpamb{}
+setting~\citep{kalhauge2026jpamb} predicts the \emph{set} of outcomes of a method, such as
+\code{ok} or \code{divide by zero}. In the example both versions have the outcome set
+$\set{\ok, \dbz}$. Comparing outcome sets therefore reports no change, which is wrong.
+Equivalence checking with symbolic execution and an SMT
+solver~\citep{godlin2009regression,lahiri2012symdiff} compares return values as well. It gives
+one verdict for the whole input space. When the methods differ, it reports one counterexample
+and says nothing about the other 48 inputs. A loop-free symbolic encoding, as in our baseline,
+gives no answer once the methods contain loops.
 
 \paragraph{Research question}
-\emph{Can we soundly decide whether a method edit preserves behaviour, and \emph{where} in
-the input space it does not, by deciding input regions with a cheap interval analysis and
-sending only return-value questions to an SMT solver? And does this certify more of the
-input domain than one solver query over the whole domain or differential testing?}
+\emph{Can we soundly decide whether a simplifying edit preserves behaviour, and where in the
+input space it does not? We try to do this by deciding input regions with an interval analysis
+and sending only return-value questions to an SMT solver. Does this certify more of the input
+domain than one solver query over the whole domain or differential testing?}
 
 \paragraph{Our approach}
-We split the declared input domain into boxes (\emph{regions}) and analyse the original
-method $A$ and the edited method $B$ independently on each box with an interval abstract
-interpreter~\citep{cousot1977abstract} for JVM bytecode. Verdict rules turn the two
-sound outcome over-approximations into a verdict for the \emph{whole} box: equal singleton
-error sets prove agreement, and disjoint outcome sets (or disjoint return intervals) prove
-disagreement on every input. Boxes the rules cannot decide are split at the constants that
+We split the declared input domain into boxes, which we call \emph{regions}. On each box we
+analyse the original method $A$ and the edited method $B$ independently with an interval
+abstract interpreter~\citep{cousot1977abstract} for JVM bytecode. Verdict rules turn the two
+sound over-approximations of the outcomes into a verdict for the whole box. Equal singleton
+error sets prove agreement. Disjoint outcome sets, or disjoint return intervals, prove
+disagreement on every input. We split boxes that the rules cannot decide at the constants that
 occur in the code. Only a box on which both versions provably return normally reaches the
-expensive step: a Z3~\citep{demoura2008z3} query over 32-bit bit-vectors that compares
-the return values, with every model replayed concretely before it is reported. The output
-is a map of the input space with \pres{}, \chg{} and \unk{} regions, and the fraction of
-inputs with a proved verdict, the \emph{certified coverage}.
+solver. For such a box we ask Z3~\citep{demoura2008z3} whether the return values can differ,
+using 32-bit bit-vectors. We replay every model concretely before we report it. The output is
+a map of the input space with \pres{}, \chg{} and \unk{} regions. It also gives the fraction
+of inputs with a proved verdict, which we call the \emph{certified coverage}.
 
 \paragraph{Contributions}
 In this paper we make the following contributions:
 \begin{itemize}
-  \item An \emph{observation contract} that defines when two versions agree (same outcome
-        class and, for \ok{}, the same 32-bit return value), and verdict rules with
-        correctness proofs. They show in particular why equal outcome sets are not enough
+  \item An \emph{observation contract} that defines when two versions agree: the same outcome
+        class and, for \ok{}, the same 32-bit return value. We give verdict rules with
+        correctness proofs. The proofs show why equal outcome sets are not enough
         (\cref{sec:background,sec:guarantees}).
   \item A region-based checker for JVM bytecode. It combines an interval abstract
         interpreter with branch refinement and widening, constant-guided region splitting,
-        and a bit-vector SMT return comparator with concrete witness replay
-        (\cref{sec:formal}). We prove the interval transfer functions sound and widening
+        and a bit-vector SMT return comparison with concrete witness replay
+        (\cref{sec:formal}). We prove the interval transfer functions sound and the widening
         terminating (\cref{sec:guarantees}).
-  \item A corpus of 10 edit pairs with real-JVM ground truth, 5 extra loop and many-path
-        pairs, and an ablation against SMT-only checking and differential testing. The
-        checker gives no wrong verdict and certifies 96\% of the inputs on average, against
-        45\% and 2\% for the baselines (\cref{sec:evaluation}).
+  \item An evaluation on 20 method pairs: a corpus of 10 edit pairs with real-JVM ground
+        truth, 5 stock \jpamb{} pairs and 5 loop and many-path pairs. We compare the checker
+        with SMT-only checking and differential testing. No verdict contradicts the ground
+        truth. The mean certified coverage is 96\%, against 45\% and 2\% for the baselines
+        (\cref{sec:evaluation}).
 \end{itemize}

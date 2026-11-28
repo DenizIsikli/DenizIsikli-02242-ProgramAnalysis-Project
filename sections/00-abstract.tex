@@ -1,15 +1,16 @@
 % Abstract: a short description of the paper (~150-200 words).
-Developers often edit code in ways they believe preserve its behaviour: they inline a
-temporary, flip a branch, or drop a guard that looks redundant. Tests rarely hit the one
-input where such an edit is wrong, and asking an SMT solver whether two whole methods are
-equivalent gives a single yes or no, and a loop-free symbolic encoding gives no answer at all once the methods contain loops.
-We present a checker that answers the question per \emph{region} of the input space. It
-analyses the original and the edited JVM method independently with an interval abstract
-interpreter on a box of inputs. Sound verdict rules turn the two outcome sets into
-\pres{}, \chg{} or \unk{} for the whole box. Undecided boxes are split at the constants
-of the code, and only regions where both versions provably return normally are passed to
-a 32-bit bit-vector SMT query over their return values. Every counterexample found by the solver
-is replayed concretely. On 20 method pairs over two input domains, no verdict contradicts exhaustive
-execution on the small domain or sampling on the large one. The checker decides 38 of 40
-pair/domain combinations with a mean certified coverage of 96\%. One SMT query over the
-whole domain decides 34 (45\%), and differential testing decides 18 (2\%). The interval layer also decides loop pairs on which symbolic execution gives up.
+Code written with AI assistance is often larger and more defensive than it needs to be, so
+developers simplify it with edits that should preserve its behaviour. Such an edit is only
+useful if it is reliable. Tests rarely reach the single input on which an edit is wrong. An
+SMT query over two whole methods returns one yes or no answer, and a loop-free symbolic
+encoding returns no answer once the methods contain loops. We present a checker that decides the question per
+\emph{region} of the input space. It analyses the original and the edited JVM method
+separately with an interval abstract interpreter on a box of inputs. Sound verdict rules turn
+the two outcome sets into \pres{}, \chg{} or \unk{} for the whole box. We split undecided
+boxes at the constants of the code. Only regions where both versions provably return normally
+are passed to a 32-bit bit-vector SMT query over the return values. We replay every
+counterexample found by the solver. We evaluate on 20 method pairs and two input domains. No
+verdict contradicts exhaustive execution on the small domain or sampling on the large one. The
+checker decides 38 of 40 pair and domain combinations, with a mean certified coverage of
+96\%. One SMT query over the whole domain decides 34 (45\%), and differential testing decides
+18 (2\%). The interval layer also decides loop pairs on which our symbolic executor gives up.
