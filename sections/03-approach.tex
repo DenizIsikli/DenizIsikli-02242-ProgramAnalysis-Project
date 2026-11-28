@@ -40,9 +40,9 @@
   \label{fig:overview}
 \end{figure}
 
-\Cref{fig:overview} gives an overview. We first fix what ``same behaviour'' means
-(\cref{sec:background}), then describe the analysis, the verdict rules and the refinement
-loop (\cref{sec:formal}), and finally their guarantees (\cref{sec:guarantees}).
+\Cref{fig:overview} gives an overview. We first define what we mean by the same behaviour
+(\cref{sec:background}). We then describe the analysis, the verdict rules and the refinement
+loop (\cref{sec:formal}). Finally we state their guarantees (\cref{sec:guarantees}).
 
 \subsection{Background}
 \label{sec:background}
@@ -50,15 +50,15 @@ loop (\cref{sec:formal}), and finally their guarantees (\cref{sec:guarantees}).
 \paragraph{Observations}
 A \emph{pair} is two static methods $A$ and $B$ with the same descriptor. We support methods
 with \code{int} parameters, an \code{int} or \code{void} result, and only integer
-instructions, branches, \code{goto} and the assertion pattern; calls, the heap and
+instructions, branches, \code{goto} and the assertion pattern. Calls, the heap and
 \code{try}/\code{catch} make a pair unsupported. An input is a vector
 $x \in \mathbb{Z}_{32}^n$. Running $P$ on $x$ yields the \emph{observation}
-$\mathit{obs}_P(x) = (o, v)$, where $o$ is the outcome class (\ok{}, \code{assertion error},
-\dbz{}, \code{*} for non-termination, \ldots) and $v$ is the 32-bit return value if
-$o = \ok{}$ and $\bot$ otherwise. Exception messages, timing and the path taken are not
-observed. $A$ and $B$ \emph{agree on $x$} iff $\mathit{obs}_A(x) = \mathit{obs}_B(x)$. A
+$\mathit{obs}_P(x) = (o, v)$. Here $o$ is the outcome class (\ok{}, \code{assertion error},
+\dbz{}, \code{*} for non-termination, \ldots). The value $v$ is the 32-bit return value if
+$o = \ok{}$, and $\bot$ otherwise. We do not observe exception messages, timing or the path
+taken. $A$ and $B$ \emph{agree on $x$} iff $\mathit{obs}_A(x) = \mathit{obs}_B(x)$. A
 region $R = I_1 \times \dots \times I_n$ is a box of integer intervals. The pair is
-\emph{preserved on $R$} if it agrees on every $x \in R$ and \emph{changed on $R$} if it
+\emph{preserved on $R$} if it agrees on every $x \in R$. It is \emph{changed on $R$} if it
 disagrees on some $x \in R$. Supported methods are deterministic, so $\mathit{obs}_P$ is a
 function.
 
@@ -66,22 +66,22 @@ function.
 Abstract interpretation~\citep{cousot1977abstract} runs a program on abstract values that
 each describe a set of concrete values. We use the interval lattice over Java \code{int}s,
 $\mathcal{I} = \set{[l,u] \mid \mathit{MIN} \le l \le u \le \mathit{MAX}} \cup \set{\bot}$,
-ordered by inclusion, with $\gamma([l,u]) = \set{v \mid l \le v \le u}$ and
-$\alpha(S) = [\min S, \max S]$. This pair is a Galois connection. An abstract operation
-$\mathit{op}^\sharp$ is sound if $\mathit{op}(x,y) \in \gamma(\mathit{op}^\sharp(X,Y))$
-for all $x \in \gamma(X)$, $y \in \gamma(Y)$ on which $\mathit{op}$ does not throw, and if
-its error set contains every exception $\mathit{op}$ can raise there. The lattice has
-height about $2^{32}$, so loops need a widening operator $\nabla$ to reach a fixpoint
-quickly.
+ordered by inclusion. The concretisation is $\gamma([l,u]) = \set{v \mid l \le v \le u}$ and
+the abstraction is $\alpha(S) = [\min S, \max S]$. This pair is a Galois connection. An
+abstract operation $\mathit{op}^\sharp$ is sound if two conditions hold. First,
+$\mathit{op}(x,y) \in \gamma(\mathit{op}^\sharp(X,Y))$ for all $x \in \gamma(X)$ and
+$y \in \gamma(Y)$ on which $\mathit{op}$ does not throw. Second, its error set contains every
+exception that $\mathit{op}$ can raise there. The lattice has height about $2^{32}$, so loops
+need a widening operator $\nabla$ to reach a fixpoint quickly.
 
 \paragraph{Symbolic execution and SMT}
-Symbolic execution~\citep{king1976symbolic} runs a program on symbolic inputs and collects,
-for each feasible path $\pi$, a path condition and a symbolic result. Two loop-free
-methods can then be compared by asking an SMT solver whether some input satisfies a path
-condition of each version and makes the results differ. Java \code{int} arithmetic wraps,
-so we use 32-bit bit-vectors, whose \code{bvsdiv} and \code{bvsrem} match \code{idiv} and
-\code{irem}, including $\mathit{MIN} / {-1} = \mathit{MIN}$; unbounded integers give wrong
-answers near the limits.
+Symbolic execution~\citep{king1976symbolic} runs a program on symbolic inputs. For each
+feasible path $\pi$ it collects a path condition and a symbolic result. We can compare two
+loop-free methods by asking an SMT solver whether some input satisfies a path condition of
+each version and makes the results differ. Java \code{int} arithmetic wraps, so we use 32-bit
+bit-vectors. Their \code{bvsdiv} and \code{bvsrem} match \code{idiv} and \code{irem},
+including $\mathit{MIN} / {-1} = \mathit{MIN}$. Unbounded integers give wrong answers near the
+limits.
 
 \subsection{Formal Description}
 \label{sec:formal}
@@ -90,34 +90,34 @@ answers near the limits.
 For a version $P$ and a non-empty region $R$, the analysis computes an outcome set
 $\hat P(R)$ and a return interval $\hat r_P(R)$. It is a forward worklist interpreter
 over bytecode offsets. The abstract state at each offset is a tuple of intervals for the
-locals and a stack of values, and the initial state maps parameter $i$ to $I_i$.
+locals and a stack of values. The initial state maps parameter $i$ to $I_i$. The analysis has
+four parts.
 \begin{itemize}
-  \item \textbf{Arithmetic.} $+$, $-$, $\times$ and negation compute the mathematical
-        bounds and return $\top$ if a bound leaves the \code{int} range. For $X / Y$ and
-        $X \,\%\, Y$ we add \dbz{} iff $0 \in Y$, compute the result separately on the
-        negative and the positive part of $Y \setminus \set{0}$, and join
-        (\cref{thm:intervals}).
-  \item \textbf{Branch refinement.} A conditional branch on $X \bowtie Y$ is followed on
-        each side with $X, Y$ narrowed by the condition or its negation; an empty
-        interval marks the side as infeasible. Narrowing a stack value is not enough, so
-        every stack value carries a tag $\mathit{src}$ that names the local it was loaded
-        from. The tag is cleared when that local is written, and the local itself is
-        narrowed too. This is how $b \neq 0$ in \code{if (b == 0) return 0} reaches the
-        later division. Intervals cannot express a hole, so $\neq$ only removes an
-        endpoint.
-  \item \textbf{Loops.} At a backward edge the new state is widened: an interval bound
-        that grew jumps to $\mathit{MIN}$ or $\mathit{MAX}$. Every reachable backward edge
-        adds the outcome \code{*} (``may not terminate''), unless the loop matches the
-        counting pattern \code{javac} emits for \code{for (i = ..; i < n; i++)}. That
-        pattern is a single exit test \code{i >= n}, a straight-line body with exactly one
-        \code{i += 1}, and no writes to \code{i} or \code{n}. Such a loop always exits. The code also accepts the mirrored decreasing counter; we prove only the increasing case.
-  \item \textbf{Unsupported code.} Any other instruction makes the result
-        \emph{unsupported}, with the full outcome set and $\top$ returns. No rule can
-        then fire.
+  \item \emph{Arithmetic.} $+$, $-$ and $\times$ compute the mathematical bounds and return
+        $\top$ if a bound leaves the \code{int} range. Negation works the same way. For
+        $X / Y$ and $X \,\%\, Y$ we add \dbz{} iff $0 \in Y$. We compute the result
+        separately on the negative and the positive part of $Y \setminus \set{0}$, and we join
+        the two results (\cref{thm:intervals}).
+  \item \emph{Branch refinement.} We follow a conditional branch on $X \bowtie Y$ on each
+        side, with $X$ and $Y$ narrowed by the condition or its negation. An empty interval
+        marks the side as infeasible. Narrowing a stack value is not enough. Every stack value
+        therefore carries a tag $\mathit{src}$ that names the local it was loaded from. The
+        tag is cleared when that local is written, and we narrow the local itself too. This is
+        how $b \neq 0$ in \code{if (b == 0) return 0} reaches the later division. Intervals
+        cannot express a hole, so $\neq$ only removes an endpoint.
+  \item \emph{Loops.} At a backward edge we widen the new state. An interval bound that grew
+        jumps to $\mathit{MIN}$ or $\mathit{MAX}$. Every reachable backward edge adds the
+        outcome \code{*} (``may not terminate''), unless the loop matches the counting pattern
+        that \code{javac} emits for \code{for (i = ..; i < n; i++)}. That pattern has a single
+        exit test \code{i >= n}, a straight-line body with exactly one \code{i += 1}, and no
+        writes to \code{i} or \code{n}. Such a loop always exits. The code also accepts the
+        mirrored decreasing counter, but we prove only the increasing case.
+  \item \emph{Unsupported code.} Any other instruction makes the result \emph{unsupported},
+        with the full outcome set and $\top$ returns. No rule can then fire.
 \end{itemize}
 
 \paragraph{Verdict rules}
-For a region $R$ the rules below are tried in order; the first that matches decides.
+For a region $R$ we try the rules below in order. The first rule that matches decides.
 \begin{center}
 \small
 \begin{tabular}{@{}llll@{}} \toprule
@@ -132,35 +132,35 @@ For a region $R$ the rules below are tried in order; the first that matches deci
 4  & otherwise & \unk{}, split $R$ & \\ \bottomrule
 \end{tabular}
 \end{center}
-Rule~1 needs a \emph{singleton} set. Equal sets with two outcomes prove nothing: in
+Rule~1 needs a \emph{singleton} set. Equal sets with two outcomes prove nothing. In
 \cref{lst:example} both sets are $\set{\ok, \dbz}$ on $D$, yet the versions differ at
 $(0,0)$. In general $A$ and $B$ may swap their outcomes between inputs.
 
 \paragraph{Return comparison}
-For rules 3 and 3$'$ we symbolically execute both versions over \emph{shared} bit-vector
-inputs $\vec x$ and collect their normally returning paths $(\pi_{P,i}, r_{P,i})$. Every
-division on such a path adds ``divisor $\neq 0$'' to $\pi$, because SMT-LIB defines
-$x / 0$ while Java throws. Then
+For rules 3 and 3$'$ we execute both versions symbolically over \emph{shared} bit-vector
+inputs $\vec x$. We collect their normally returning paths $(\pi_{P,i}, r_{P,i})$. Every
+division on such a path adds the condition ``divisor $\neq 0$'' to $\pi$. SMT-LIB defines
+$x / 0$, while Java throws. Then
 \[
   \Phi(R) \;=\; \vec x \in R \;\wedge\; \bigvee_{i,j}\bigl(\pi_{A,i} \wedge \pi_{B,j}
   \wedge r_{A,i} \neq r_{B,j}\bigr).
 \]
-Before an UNSAT answer is trusted, the checker asks Z3 whether the collected paths cover all
-of $R$ for both versions. If they do not, the answer is \unk{}. A model $w$ is replayed on
-an independent concrete interpreter with Java \code{int} semantics and is reported only if
-the two observations really differ. A solver timeout, a backward jump or more than 256
-paths also give \unk{}, never \pres{}.
+Before we trust an UNSAT answer, we ask Z3 whether the collected paths cover all of $R$ for
+both versions. If they do not, the answer is \unk{}. We replay a model $w$ on an independent
+concrete interpreter with Java \code{int} semantics. We report it only if the two observations
+really differ. A solver timeout, a backward jump or more than 256 paths also give \unk{},
+never \pres{}.
 
 \paragraph{Refinement}
-\code{check\_pair} keeps a queue of regions, starting with $D$. An undecided region is
-split by \code{split\_region}. For the first parameter whose interval strictly contains a
-constant $c$ pushed by either version (or $0$), it produces $[l, c-1]$, $[c,c]$ and
-$[c+1, u]$. Without such a constant it bisects the widest interval. The children are
-disjoint and cover the parent. A region decided by Rule~3$'$ keeps its witness but is still
-split, so the rest of it can be certified. A budget (about 200 regions by default) bounds the
-loop; regions left over stay \unk{}. The pair verdict is \chg{} if any witness exists,
-\pres{} if \pres{} regions cover $D$, and \unk{} otherwise. The \emph{certified coverage} is
-the fraction of $D$ in \pres{} regions, whole-region \chg{} regions and witness points.
+\code{check\_pair} keeps a queue of regions, starting with $D$. We split an undecided region
+with \code{split\_region}. We take the first parameter whose interval strictly contains a
+constant $c$ pushed by either version (or $0$). The split produces $[l, c-1]$, $[c,c]$ and
+$[c+1, u]$. Without such a constant we bisect the widest interval. The children are disjoint
+and cover the parent. A region decided by Rule~3$'$ keeps its witness but is still split, so
+we can certify the rest of it. A budget of about 200 regions bounds the loop. Regions left over
+stay \unk{}. The pair verdict is \chg{} if any witness exists, \pres{} if \pres{} regions
+cover $D$, and \unk{} otherwise. The \emph{certified coverage} is the fraction of $D$ in
+\pres{} regions, whole-region \chg{} regions and witness points.
 
 \subsection{Theoretical Guarantees}
 \label{sec:guarantees}
